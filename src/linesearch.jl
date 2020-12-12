@@ -1,12 +1,11 @@
 # fdf(x, α, d) = f(x + α * d), ∇f(x + α * d)
-function strong_backtracking!(fdf, x0, d;
+function strong_backtracking!(fdf, x0, d, y0, grad0;
                               α = one(eltype(x0)),
                               αmax = convert(eltype(x0), Inf),
                               β = convert(eltype(x0), 1e-4),
                               σ = convert(eltype(x0), 0.5)
                              )
-    α_prev = zero(eltype(x0))
-    y0, grad0 = fdf(x0, α_prev, d)
+    α_prev = zero(y0)
     y_prev = αlo = αhi = convert(typeof(y0), NaN)
     g0 = grad0 ⋅ d
     if g0 > 0
@@ -59,4 +58,14 @@ function strong_backtracking!(fdf, x0, d;
             αlo = α
         end
     end
+end
+
+function strong_backtracking!(fdf, x0, d;
+                              α = one(eltype(x0)),
+                              αmax = convert(eltype(x0), Inf),
+                              β = convert(eltype(x0), 1e-4),
+                              σ = convert(eltype(x0), 0.5)
+                             )
+    y0, grad0 = fdf(x0, zero(eltype(x0)), d)
+    return strong_backtracking!(fdf, x0, d, y0, grad0, α = α, αmax = αmax, β = β, σ = σ)
 end

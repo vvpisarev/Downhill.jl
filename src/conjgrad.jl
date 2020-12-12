@@ -12,13 +12,14 @@ mutable struct CGDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: DescentMethod
     g::V
     gpre::V
     dir::V
+    y::T
 end
 
 @inline gradientvec(M::CGDescent) = M.g
 @inline argumentvec(M::CGDescent) = M.x
 
 function CGDescent(x::AbstractVector)
-    CGDescent(similar(x), similar(x), similar(x), similar(x), similar(x))
+    CGDescent(similar(x), similar(x), similar(x), similar(x), similar(x), zero(eltype(x)))
 end
 
 function __descent_dir!(M::CGDescent)
@@ -52,6 +53,7 @@ function callfn!(M::CGDescent, fdf, x, α, d)
     let x = argumentvec(M)
         (y, g) = fdf(x, gradientvec(M))
         __update_grad!(M, g)
+        M.y = y
         return (y, g)
     end
 end
@@ -60,7 +62,7 @@ function step!(M::CGDescent, fdf!)
     M.x, M.xpre = M.xpre, M.x
     xpre, d = M.xpre, __descent_dir!(M)
     M.g, M.gpre = M.gpre, M.g
-    α = strong_backtracking!(fdf!, xpre, d, α = 1.0, β = 1e-4, σ = 0.1)
+    α = strong_backtracking!(fdf!, xpre, d, M.y, M.gpre, α = 0.01, β = 1e-4, σ = 0.1)
     return α
 end
 

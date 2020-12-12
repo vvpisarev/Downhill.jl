@@ -13,6 +13,12 @@ function init!(M::CountCalls, args...; kw...)
     return
 end
 
+function reset!(M::CountCalls, args...; kw...)
+    M.call_count = 0
+    reset!(M.descent, args...; kw...)
+    return
+end
+
 function callfn!(M::CountCalls, fdf, x, α, d)
     fg = callfn!(M.descent, fdf, x, α, d)
     M.call_count += 1
@@ -36,6 +42,12 @@ CountIters(M::DescentMethod) = CountIters(M, 0)
 function init!(M::CountIters, args...; kw...)
     M.iter_count = 0
     init!(M.descent, args...; kw...)
+    return
+end
+
+function reset!(M::CountIters, args...; kw...)
+    M.iter_count = 0
+    reset!(M.descent, args...; kw...)
     return
 end
 
