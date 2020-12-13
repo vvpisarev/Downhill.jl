@@ -6,7 +6,7 @@ export HyperGradDescent
 Descent method which minimizes the objective function in the direction 
 of antigradient at each step.
 """
-mutable struct HyperGradDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: DescentMethod
+mutable struct HyperGradDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
     x::V
     g::V
     gpre::V

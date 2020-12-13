@@ -6,7 +6,7 @@ export CGDescent
 Descent method which minimizes the objective function in the direction 
 of antigradient at each step.
 """
-mutable struct CGDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: DescentMethod
+mutable struct CGDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
     x::V
     xpre::V
     g::V
@@ -17,6 +17,7 @@ end
 
 @inline gradientvec(M::CGDescent) = M.g
 @inline argumentvec(M::CGDescent) = M.x
+@inline step_origin(M::CGDescent) = M.xpre
 
 function CGDescent(x::AbstractVector)
     CGDescent(similar(x), similar(x), similar(x), similar(x), similar(x), zero(eltype(x)))
@@ -58,11 +59,15 @@ function callfn!(M::CGDescent, fdf, x, α, d)
     end
 end
 
-function step!(M::CGDescent, fdf!)
+function __step_init!(M::CGDescent, optfn!)
     M.x, M.xpre = M.xpre, M.x
-    xpre, d = M.xpre, __descent_dir!(M)
+    return
+end
+
+function __compute_step!(M::CGDescent, optfn!, d, maxstep)
+    xpre = M.xpre
     M.g, M.gpre = M.gpre, M.g
-    α = strong_backtracking!(fdf!, xpre, d, M.y, M.gpre, α = 0.01, β = 1e-4, σ = 0.1)
+    α = strong_backtracking!(optfn!, xpre, d, M.y, M.gpre, α = 0.01, αmax = maxstep, β = 1e-4, σ = 0.1)
     return α
 end
 
@@ -105,5 +110,3 @@ end
     fill!(M.dir, 0)
     return
 end
-
-@inline isconverged(M::CGDescent, gtol) = M |> gradientvec |> norm <= abs(gtol)

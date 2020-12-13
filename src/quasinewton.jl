@@ -5,7 +5,7 @@ Quasi-Newton descent method.
 """
 mutable struct BFGS{T<:AbstractFloat,
                     V<:AbstractVector{T},
-                    M<:AbstractMatrix{T}} <: DescentMethod
+                    M<:AbstractMatrix{T}} <: CoreMethod
     invH::M
     x::V
     g::V
@@ -19,6 +19,7 @@ end
 
 @inline gradientvec(M::BFGS) = M.g
 @inline argumentvec(M::BFGS) = M.x
+@inline step_origin(M::BFGS) = M.xpre
 
 function BFGS(x::AbstractVector{T}) where {T}
     F = float(T)
@@ -36,8 +37,21 @@ function BFGS(x::AbstractVector{T}) where {T}
     return bfgs
 end
 
-function init!(::BFGS{T}, optfn!, x0) where {T}
+function init!(M::BFGS{T}, optfn!, x0) where {T}
     optfn!(x0, zero(T), x0)
+    copy!(M.xpre, M.x)
+    copy!(M.gpre, M.g)
+    map!(-, M.d, M.g)
+    α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, α = 1e-4, β = 0.01, σ = 0.9)
+    M.xdiff .= M.x - M.xpre
+    M.gdiff .= M.g - M.gpre
+    scale = dot(M.gdiff, M.xdiff) / dot(M.gdiff, M.gdiff)
+
+    invH = M.invH
+    nr, nc = size(invH)
+    for j in 1:nc, i in 1:nr
+        invH[i, j] = (i == j) * abs(M.xdiff[i] * M.gdiff[j])
+    end
     return
 end
 
@@ -55,7 +69,7 @@ function reset!(M::BFGS, x0, scale::Real=1)
     invH = M.invH
     nr, nc = size(invH)
     for j in 1:nc, i in 1:nr
-        invH[i, j] = i == j
+        invH[i, j] = (i == j) * scale
     end
     return
 end
@@ -68,18 +82,24 @@ end
     return y, g
 end
 
-function step!(M::BFGS, optfn!)
+function __descent_dir!(M::BFGS)
+    mul!(M.d, M.invH, M.gpre, -1, 0)
+    return M.d
+end
+
+@inline function __step_init!(M::BFGS, optfn!)
     #=
     argument and gradient from the end of the last
     iteration are stored into `xpre` and `gpre`
     =#
     M.gpre, M.g = M.g, M.gpre
     M.xpre, M.x = M.x, M.xpre
-    
-    # compute the descent direction as `d = -invH * gpre`
-    mul!(M.d, M.invH, M.gpre, -1, 0)
-    α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, σ = 0.9)
+    return
+end
 
+function __compute_step!(M::BFGS, optfn!, d, maxstep)
+    xpre = M.xpre
+    α = strong_backtracking!(optfn!, xpre, d, M.y, M.gpre, αmax = maxstep, β = 0.01, σ = 0.9)
     #=
     BFGS update:
              δγ'B + Bγδ'   ⌈    γ'Bγ ⌉ δδ'
@@ -116,5 +136,3 @@ end
     end
     return
 end
-
-@inline isconverged(M::BFGS, gtol) = M |> gradientvec |> norm <= abs(gtol)

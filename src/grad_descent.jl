@@ -6,7 +6,7 @@ export SteepestDescent
 Descent method which minimizes the objective function in the direction 
 of antigradient at each step.
 """
-mutable struct SteepestDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: DescentMethod
+mutable struct SteepestDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
     x::V
     xpre::V
     g::V
@@ -18,17 +18,13 @@ end
 @inline fnval(M::SteepestDescent) = M.y
 @inline gradientvec(M::SteepestDescent) = M.g
 @inline argumentvec(M::SteepestDescent) = M.x
+@inline step_origin(M::SteepestDescent) = M.xpre
 
 function SteepestDescent(x::AbstractVector, α::Real)
     SteepestDescent(similar(x), similar(x), similar(x), similar(x), zero(eltype(x)), convert(eltype(x), α))
 end
 
 SteepestDescent(x::AbstractVector) = SteepestDescent(x, one(eltype(x)))
-
-@inline function __descent_dir!(M::SteepestDescent)
-    M.dir .= .-M.g
-    return M.dir
-end
 
 """
 `optfn!` must be the 3-arg closure that computes fdf(x + α*d) and overwrites `M`'s gradient
@@ -58,10 +54,19 @@ function callfn!(M::SteepestDescent, fdf, x, α, d)
     return y, g
 end
 
-function step!(M::SteepestDescent, optfn!)
+@inline function __step_init!(M::SteepestDescent, optfn!)
     M.x, M.xpre = M.xpre, M.x
-    xpre, d = M.xpre, __descent_dir!(M)
-    α = strong_backtracking!(optfn!, xpre, d, M.y, M.g, α = M.α, β = 1e-4, σ = 0.1)
+    return
+end
+
+@inline function __descent_dir!(M::SteepestDescent)
+    map!(-, M.dir, M.g)
+    return M.dir
+end
+
+function __compute_step!(M::SteepestDescent, optfn!, d, maxstep)
+    xpre = M.xpre
+    α = strong_backtracking!(optfn!, xpre, d, M.y, M.g, α = M.α, αmax = maxstep, β = 1e-4, σ = 0.1)
     return α
 end
 
@@ -92,5 +97,3 @@ end
     end
     return
 end
-
-@inline isconverged(M::SteepestDescent, gtol) = M |> gradientvec |> norm <= abs(gtol)
