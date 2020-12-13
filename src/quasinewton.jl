@@ -1,3 +1,4 @@
+export BFGS
 """
     BFGS
 
@@ -45,7 +46,6 @@ function init!(M::BFGS{T}, optfn!, x0) where {T}
     α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, α = 1e-4, β = 0.01, σ = 0.9)
     M.xdiff .= M.x - M.xpre
     M.gdiff .= M.g - M.gpre
-    scale = dot(M.gdiff, M.xdiff) / dot(M.gdiff, M.gdiff)
 
     invH = M.invH
     nr, nc = size(invH)
@@ -98,8 +98,8 @@ end
 end
 
 function __compute_step!(M::BFGS, optfn!, d, maxstep)
-    xpre = M.xpre
-    α = strong_backtracking!(optfn!, xpre, d, M.y, M.gpre, αmax = maxstep, β = 0.01, σ = 0.9)
+    x, xpre, g, gpre, invH = M.x, M.xpre, M.g, M.gpre, M.invH
+    α = strong_backtracking!(optfn!, xpre, d, M.y, gpre, αmax = maxstep, β = 0.01, σ = 0.9)
     #=
     BFGS update:
              δγ'B + Bγδ'   ⌈    γ'Bγ ⌉ δδ'
@@ -107,13 +107,13 @@ function __compute_step!(M::BFGS, optfn!, d, maxstep)
                  δ'γ       ⌊     δ'γ ⌋ δ'γ
     =#
     δ, γ = M.xdiff, M.gdiff
-    γ .= M.g .- M.gpre
-    δ .= M.x .- M.xpre
+    map!(-, γ, g, gpre)
+    map!(-, δ, x, xpre)
     denom = dot(δ, γ)
-    δscale = 1 + dot(γ, M.invH, γ) / denom
+    δscale = 1 + dot(γ, invH, γ) / denom
     # d <- B * γ
-    mul!(M.d, M.invH, γ, 1, 0)
-    M.invH .= M.invH .- (δ .* M.d' .+ M.d .* δ') ./ denom .+ δscale .* δ .* δ' ./ denom
+    mul!(d, invH, γ, 1, 0)
+    invH .= invH .- (δ .* d' .+ d .* δ') ./ denom .+ δscale .* δ .* δ' ./ denom
     return α
 end
 

@@ -5,12 +5,12 @@ function strong_backtracking!(fdf, x0, d, y0, grad0;
                               β = convert(typeof(y0), 1e-4),
                               σ = convert(typeof(y0), 0.5)
                              )
-    α_prev = zero(y0)
+    α_prev = zero(α)
     y_prev = αlo = αhi = convert(typeof(y0), NaN)
     g0 = grad0 ⋅ d
     if g0 > 0
         g0 = -g0
-        d .*= -1
+        rmul!(d, -1)
     end
     mag = max(abs(y0), -α * g0)
     ϵ = sqrt(eps(one(y0))) * mag
