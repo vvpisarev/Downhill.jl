@@ -28,12 +28,12 @@ function optimize!(M::CoreMethod, fdf, x0; gtol = convert(eltype(x0), 1e-6), max
     if !isnothing(gtol) && gtol > 0
         M = StopByGradient(M, gtol)
     end
-    if isnothing(maxiter) || maxiter <= 0
+    if isnothing(maxiter) || maxiter < 0
         M = LimitIters(M)
     else
         M = LimitIters(M, maxiter)
     end
-    if isnothing(maxcalls) || maxcalls <= 0
+    if isnothing(maxcalls) || maxcalls < 0
         M = LimitCalls(M)
     else
         M = LimitCalls(M, maxcalls)
