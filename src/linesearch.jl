@@ -8,7 +8,6 @@ function strong_backtracking!(fdf, x0, d, y0, grad0;
     α_prev = zero(y0)
     y_prev = αlo = αhi = convert(typeof(y0), NaN)
     g0 = grad0 ⋅ d
-    @info g0
     if g0 > 0
         g0 = -g0
         d .*= -1

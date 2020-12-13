@@ -111,8 +111,9 @@ function __compute_step!(M::BFGS, optfn!, d, maxstep)
     δ .= M.x .- M.xpre
     denom = dot(δ, γ)
     δscale = 1 + dot(γ, M.invH, γ) / denom
-    mul!(γ, M.invH, γ, 1, 0)
-    M.invH .-= (δ .* γ' .+ γ .* δ' .+ δscale .* δ .* δ') ./ denom
+    # d <- B * γ
+    mul!(M.d, M.invH, γ, 1, 0)
+    M.invH .= M.invH .- (δ .* M.d' .+ M.d .* δ') ./ denom .+ δscale .* δ .* δ' ./ denom
     return α
 end
 
