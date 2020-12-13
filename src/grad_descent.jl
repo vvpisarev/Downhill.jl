@@ -29,7 +29,7 @@ SteepestDescent(x::AbstractVector) = SteepestDescent(x, one(eltype(x)))
 """
 `optfn!` must be the 3-arg closure that computes fdf(x + α*d) and overwrites `M`'s gradient
 """
-function init!(::SteepestDescent{T}, optfn!, x0) where {T}
+function init!(::SteepestDescent{T}, optfn!, x0; reset) where {T}
     optfn!(x0, zero(T), x0)
     return
 end

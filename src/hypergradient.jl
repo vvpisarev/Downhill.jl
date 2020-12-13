@@ -24,7 +24,7 @@ end
 
 HyperGradDescent(x::AbstractVector{T}) where {T} = HyperGradDescent(x, 0, 1e-4)
 
-function init!(::HyperGradDescent{T}, optfn!, x0) where {T}
+function init!(::HyperGradDescent{T}, optfn!, x0; reset) where {T}
     optfn!(x0, zero(T), x0)
     return
 end
@@ -78,5 +78,3 @@ end
     end
     return
 end
-
-@inline isconverged(M::HyperGradDescent, gtol) = M |> gradientvec |> norm <= abs(gtol)

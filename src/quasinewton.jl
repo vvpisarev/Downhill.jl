@@ -38,19 +38,21 @@ function BFGS(x::AbstractVector{T}) where {T}
     return bfgs
 end
 
-function init!(M::BFGS{T}, optfn!, x0) where {T}
+function init!(M::BFGS{T}, optfn!, x0; reset) where {T}
     optfn!(x0, zero(T), x0)
-    copy!(M.xpre, M.x)
-    copy!(M.gpre, M.g)
-    map!(-, M.d, M.g)
-    α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, α = 1e-4, β = 0.01, σ = 0.9)
-    M.xdiff .= M.x - M.xpre
-    M.gdiff .= M.g - M.gpre
+    if reset
+        M.xpre, M.x = M.x, M.xpre
+        M.gpre, M.g = M.g, M.gpre
+        map!(-, M.d, M.gpre)
+        α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, α = 1e-4, β = 0.01, σ = 0.9)
+        map!(-, M.xdiff, M.x, M.xpre)
+        map!(-, M.gdiff, M.g, M.gpre)
 
-    invH = M.invH
-    nr, nc = size(invH)
-    for j in 1:nc, i in 1:nr
-        invH[i, j] = (i == j) * abs(M.xdiff[i] * M.gdiff[j])
+        invH = M.invH
+        nr, nc = size(invH)
+        for j in 1:nc, i in 1:nr
+            invH[i, j] = (i == j) * abs(M.xdiff[i] * M.gdiff[j])
+        end
     end
     return
 end

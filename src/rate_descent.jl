@@ -21,7 +21,7 @@ end
 
 FixedRateDescent(x::AbstractVector) = FixedRateDescent(x, convert(eltype(x), 0.01))
 
-function init!(M::FixedRateDescent{T}, optfn!, x0) where {T}
+function init!(M::FixedRateDescent{T}, optfn!, x0; reset) where {T}
     optfn!(x0, zero(T), x0)
     return
 end
@@ -71,9 +71,6 @@ end
     return
 end
 
-@inline isconverged(M::FixedRateDescent, gtol) = M |> gradientvec |> norm <= abs(gtol)
-
-
 """
     MomentumDescent
 
@@ -95,7 +92,7 @@ function MomentumDescent(x::AbstractVector; learn_rate::Real, decay_rate::Real)
     MomentumDescent(similar(x), similar(x), similar(x), convert(eltype(x), learn_rate), convert(eltype(x), decay_rate))
 end
 
-function init!(M::MomentumDescent{T}, optfn!, x0) where {T}
+function init!(M::MomentumDescent{T}, optfn!, x0; reset) where {T}
     optfn!(x0, zero(T), x0)
     fill!(M.v, zero(T))
     return
@@ -153,8 +150,6 @@ end
     return
 end
 
-@inline isconverged(M::MomentumDescent, gtol) = M |> gradientvec |> norm <= abs(gtol)
-
 """
     NesterovMomentum
 
@@ -176,7 +171,7 @@ function NesterovMomentum(x::AbstractVector; learn_rate::Real, decay_rate::Real)
     NesterovMomentum(similar(x), similar(x), similar(x), convert(eltype(x), learn_rate), convert(eltype(x), decay_rate))
 end
 
-function init!(M::NesterovMomentum{T}, optfn!, x0) where {T}
+function init!(M::NesterovMomentum{T}, optfn!, x0; reset) where {T}
     optfn!(x0, zero(T), x0)
     fill!(M.v, zero(T))
     return
@@ -234,5 +229,3 @@ end
     end
     return
 end
-
-@inline isconverged(M::NesterovMomentum, gtol) = M |> gradientvec |> norm <= abs(gtol)

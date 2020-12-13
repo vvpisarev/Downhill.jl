@@ -31,7 +31,7 @@ function __descent_dir!(M::CGDescent)
     return M.dir
 end
 
-function init!(M::CGDescent{T}, optfn!, x0) where {T}
+function init!(M::CGDescent{T}, optfn!, x0; reset) where {T}
     y, g = optfn!(x0, zero(T), x0)
     __update_gpre!(M, M.g)
     __zero_dir!(M)

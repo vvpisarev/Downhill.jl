@@ -7,10 +7,10 @@ Find an optimizer for `fdf`, starting with the initial approximation `x0`.
 `fdf(x, g)` must return a tuple (f(x), ∇f(x)) and, if `g` is mutable, overwrite 
 it with the gradient.
 """
-function optimize!(M::Wrapper, fdf, x0)
+function optimize!(M::Wrapper, fdf, x0; reset = true)
     optfn!(x, α, d) = callfn!(M, fdf, x, α, d)
 
-    init!(M, optfn!, x0)
+    init!(M, optfn!, x0, reset = reset)
     while !stopcond(M)
         step!(M, optfn!)
     end
@@ -24,7 +24,7 @@ Find an optimizer for `fdf`, starting with the initial approximation `x0`.
 `fdf(x, g)` must return a tuple (f(x), ∇f(x)) and, if `g` is mutable, overwrite 
 it with the gradient.
 """
-function optimize!(M::CoreMethod, fdf, x0; gtol = convert(eltype(x0), 1e-6), maxiter = 100, maxcalls = nothing)
+function optimize!(M::CoreMethod, fdf, x0; gtol = convert(eltype(x0), 1e-6), maxiter = 100, maxcalls = nothing, reset = true)
     if !isnothing(gtol) && gtol > 0
         M = StopByGradient(M, gtol)
     end
@@ -38,5 +38,5 @@ function optimize!(M::CoreMethod, fdf, x0; gtol = convert(eltype(x0), 1e-6), max
     else
         M = LimitCalls(M, maxcalls)
     end
-    optimize!(M, fdf, x0)
+    optimize!(M, fdf, x0, reset = reset)
 end
