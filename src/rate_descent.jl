@@ -14,6 +14,7 @@ end
 
 @inline gradientvec(M::FixedRateDescent) = M.g
 @inline argumentvec(M::FixedRateDescent) = M.x
+@inline step_origin(M::FixedRateDescent) = M.x
 
 function FixedRateDescent(x::AbstractVector, α::Real)
     FixedRateDescent(similar(x), similar(x), convert(eltype(x), α))
@@ -45,9 +46,17 @@ end
     return y, g
 end
 
-function step!(M::FixedRateDescent, fdf!)
-    fdf!(M.x, -M.α, M.g)
-    return M.α
+function __step_init!(M::FixedRateDescent, optfn!) end
+
+function __descent_dir!(M::FixedRateDescent)
+    rmul!(M.g, -1)
+    return M.g
+end
+
+function __compute_step!(M::FixedRateDescent, optfn!, d, maxstep)
+    s = min(maxstep, M.α)
+    optfn!(M.x, s, d)
+    return s
 end
 
 @inline function __update_arg!(M::FixedRateDescent, x, α, d)

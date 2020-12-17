@@ -5,6 +5,7 @@ function strong_backtracking!(fdf, x0, d, y0, grad0;
                               β = convert(typeof(y0), 1e-4),
                               σ = convert(typeof(y0), 0.5)
                              )
+    α = min(α, αmax / 2)
     α_prev = zero(α)
     y_prev = αlo = αhi = convert(typeof(y0), NaN)
     g0 = grad0 ⋅ d
@@ -18,7 +19,6 @@ function strong_backtracking!(fdf, x0, d, y0, grad0;
     wolfe1 = β * g0
     wolfe2 = -σ * g0
 
-    α = min(α, αmax / 2)
     while true
         y, grad = fdf(x0, α, d)
         if y > y0 + α * wolfe1 || y >= y_prev # x >= NaN is always false
@@ -37,7 +37,7 @@ function strong_backtracking!(fdf, x0, d, y0, grad0;
 
     # zoom phase
     ylo, = fdf(x0, αlo, d)
-    for nzoom in 1:20_000
+    for nzoom in 1:2000
         α = (αlo + αhi) / 2
         y, grad = fdf(x0, α, d)
         g = grad ⋅ d

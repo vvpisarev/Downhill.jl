@@ -3,38 +3,62 @@ export CGDescent
 """
     CGDescent
 
-Descent method which minimizes the objective function in the direction 
-of antigradient at each step.
+Conjugate gradient method (Hager-Zhang version [W.Hager, H.Zhang // SIAM J. Optim (2006) Vol. 16, pp. 170-192]) 
 """
 mutable struct CGDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
     x::V
     xpre::V
     g::V
     gpre::V
+    gdiff::V
     dir::V
     y::T
+    α::T
+    α0::T
 end
 
+@inline fnval(M::CGDescent) = M.y
 @inline gradientvec(M::CGDescent) = M.g
 @inline argumentvec(M::CGDescent) = M.x
 @inline step_origin(M::CGDescent) = M.xpre
 
 function CGDescent(x::AbstractVector)
-    CGDescent(similar(x), similar(x), similar(x), similar(x), similar(x), zero(eltype(x)))
+    T = eltype(x)
+    CGDescent(similar(x),
+              similar(x),
+              similar(x),
+              similar(x),
+              similar(x),
+              similar(x),
+              zero(T),
+              convert(T, 0.01),
+              convert(T, 0.01)
+             )
 end
 
 function __descent_dir!(M::CGDescent)
-    β = dot(M.g, M.g) / dot(M.gpre, M.gpre)
-    map!(M.dir, M.dir, M.g) do a, b
+    d = M.dir
+    y = M.gdiff
+    dty = dot(d, y)
+    if iszero(dty)
+        # d' * y == 0 means we are at the first iteration
+        β = dty
+    else
+        β = (dot(y, M.g) - 2 * dot(d, M.g) * dot(y, y) / dty) / dty
+    end
+    η = one(β) / 100
+    β = max(β, -1 / (norm(d) * min(η, norm(M.g))))
+    map!(d, d, M.g) do a, b
         muladd(a, β, -b)
     end
-    return M.dir
+    return d
 end
 
 function init!(M::CGDescent{T}, optfn!, x0; reset) where {T}
     y, g = optfn!(x0, zero(T), x0)
     __update_gpre!(M, M.g)
-    __zero_dir!(M)
+    map!(-, M.dir, M.g)
+    M.α = M.α0
     return
 end
 
@@ -61,13 +85,19 @@ end
 
 function __step_init!(M::CGDescent, optfn!)
     M.x, M.xpre = M.xpre, M.x
+    map!(-, M.gdiff, M.g, M.gpre)
     return
 end
 
 function __compute_step!(M::CGDescent, optfn!, d, maxstep)
     xpre = M.xpre
     M.g, M.gpre = M.gpre, M.g
-    α = strong_backtracking!(optfn!, xpre, d, M.y, M.gpre, α = 0.01, αmax = maxstep, β = 1e-4, σ = 0.1)
+    ypre = M.y
+    α = strong_backtracking!(optfn!, xpre, d, M.y, M.gpre, α = M.α, αmax = maxstep, β = 0.01, σ = 0.1)
+    fdiff = M.y - ypre
+    if fdiff < 0
+        M.α = 2 * fdiff / dot(d, M.gpre)
+    end
     return α
 end
 

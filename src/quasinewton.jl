@@ -1,4 +1,5 @@
 export BFGS
+
 """
     BFGS
 
@@ -18,6 +19,7 @@ mutable struct BFGS{T<:AbstractFloat,
     y::T
 end
 
+@inline fnval(M::BFGS) = M.y
 @inline gradientvec(M::BFGS) = M.g
 @inline argumentvec(M::BFGS) = M.x
 @inline step_origin(M::BFGS) = M.xpre
@@ -44,14 +46,18 @@ function init!(M::BFGS{T}, optfn!, x0; reset) where {T}
         M.xpre, M.x = M.x, M.xpre
         M.gpre, M.g = M.g, M.gpre
         map!(-, M.d, M.gpre)
-        α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, α = 1e-4, β = 0.01, σ = 0.9)
+        α = 
+        let dlen = norm(M.d)
+            sqrt(eps(T)) / dlen * minimum(abs, M.xpre)
+        end
+        α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, α = α, β = one(T)/100, σ = convert(T, 0.9))
         map!(-, M.xdiff, M.x, M.xpre)
         map!(-, M.gdiff, M.g, M.gpre)
 
         invH = M.invH
         nr, nc = size(invH)
         for j in 1:nc, i in 1:nr
-            invH[i, j] = (i == j) * abs(M.xdiff[i] * M.gdiff[j])
+            invH[i, j] = (i == j) * abs(M.xdiff[i] / M.gdiff[j])
         end
     end
     return

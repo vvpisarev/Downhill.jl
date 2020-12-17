@@ -6,6 +6,7 @@ function step!(M::DescentMethod, optfn!, maxstep = Inf)
     __step_init!(M, optfn!)
     d = __descent_dir!(M)
     __compute_step!(M, optfn!, d, maxstep)
+    return
 end
 
 abstract type CoreMethod <: DescentMethod end

@@ -24,7 +24,12 @@ Find an optimizer for `fdf`, starting with the initial approximation `x0`.
 `fdf(x, g)` must return a tuple (f(x), ∇f(x)) and, if `g` is mutable, overwrite 
 it with the gradient.
 """
-function optimize!(M::CoreMethod, fdf, x0; gtol = convert(eltype(x0), 1e-6), maxiter = 100, maxcalls = nothing, reset = true)
+function optimize!(M::CoreMethod, fdf, x0;
+                   gtol = convert(eltype(x0), 1e-6),
+                   maxiter = 100,
+                   maxcalls = nothing,
+                   reset = true,
+                   step_limit = nothing)
     if !isnothing(gtol) && gtol > 0
         M = StopByGradient(M, gtol)
     end
@@ -37,6 +42,9 @@ function optimize!(M::CoreMethod, fdf, x0; gtol = convert(eltype(x0), 1e-6), max
         M = LimitCalls(M)
     else
         M = LimitCalls(M, maxcalls)
+    end
+    if !isnothing(step_limit)
+        M = LimitStepSize(M, step_limit)
     end
     optimize!(M, fdf, x0, reset = reset)
 end
