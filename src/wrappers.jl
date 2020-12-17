@@ -54,7 +54,7 @@ end
 
 function conv_success(M::StopByGradient)
     base = M.descent
-    norm(gradientvec(base)) <= M.gtol ? true : conv_success(base)
+    norm(gradientvec(base), Inf) <= M.gtol ? true : conv_success(base)
 end
 
 mutable struct LimitCalls{T<:DescentMethod}<:Wrapper
