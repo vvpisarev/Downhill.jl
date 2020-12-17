@@ -187,7 +187,7 @@ const methane = BrusilovskyEoSComponent(
                     Psi = 0.37447,
                     molar_mass = 0.016043)
 
-function vt_stability(subst, RT, molar_dens)
+function vt_stability(subst, RT, molar_dens; optmethod::Type{<:DescentMethods.DescentMethod}=DescentMethods.BFGS)
     chempot(rho) = RT * (log(rho) - logΦ(subst, 1.0, RT, rho))
     μ0 = chempot(molar_dens)
     function Dfunc!(rho, dro)
@@ -210,7 +210,7 @@ function vt_stability(subst, RT, molar_dens)
         to_b = (1 / subst.b - x[1]) / d[1]
         return minimum(a for a in (to_zero, to_b) if a > 0)
     end
-    opt = DescentMethods.BFGS(rhovec)
+    opt = optmethod(rhovec)
     #opt.α0 = 1e-8
     optresult = DescentMethods.optimize!(opt, Dfunc!, rhovec, maxcalls = 200, step_limit = maxstep)
     p_orig = brusilovsky_pressure(subst, 1/molar_dens, RT)
@@ -224,7 +224,7 @@ function vt_stability(subst, RT, molar_dens)
     return optresult, p_liq, p_orig
 end
 
-function vt_flash(subst, RT, molar_dens)
+function vt_flash(subst, RT, molar_dens; optmethod::Type{<:DescentMethods.DescentMethod}=DescentMethods.BFGS)
     chempot(rho) = RT * (log(rho) - logΦ(subst, 1.0, RT, rho))
     μ0 = chempot(molar_dens)
     p_orig = brusilovsky_pressure(subst, 1/molar_dens, RT)
@@ -242,7 +242,7 @@ function vt_flash(subst, RT, molar_dens)
         return dA, grad
     end
 
-    stabtest = vt_stability(subst, RT, molar_dens)
+    stabtest = vt_stability(subst, RT, molar_dens, optmethod)
 
     if stabtest[2] + p_orig > -sqrt(eps(one(p_orig))) * abs(p_orig)
         return
@@ -272,18 +272,22 @@ function vt_flash(subst, RT, molar_dens)
             end
         return min(to_zero, to_one, to_b)
     end
-    opt = DescentMethods.BFGS(rhov)
+
+    opt = optmethod(rhov)
     #opt.α0 = 1e-8
 
     arg = DescentMethods.argumentvec(opt)
     gradA = DescentMethods.gradientvec(opt)
+
     let a = maxstep(rhov, (-znew[1], -1)) / 2
         while true
             arg[1] = rhov[1] - a * znew[1]
             arg[2] = 1 - a
             if twophaseA!(arg, gradA)[1] < A0
-                opt.xdiff .= arg .- rhov
-                DescentMethods.reset!(opt, arg, norm(opt.xdiff) / norm(gradA))
+                if opt isa DescentMethods.BFGS
+                    opt.xdiff .= arg .- rhov
+                    DescentMethods.reset!(opt, arg, norm(opt.xdiff) / norm(gradA))
+                end
                 break
             end
             a /= 2
@@ -297,8 +301,17 @@ function vt_flash(subst, RT, molar_dens)
     xfinal = optresult.argument
     d1, d2 = xfinal[1] / xfinal[2], (rhov[1] - xfinal[1]) / (1 - xfinal[2])
     if d1 < d2
-        return d1, d2, xfinal[2]
+        return (ρgas = d1, ρliq = d2, s = xfinal[2])
     else
-        return d2, d1, 1 - xfinal[2]
+        return (ρgas = d2, ρliq = d1, s = 1 - xfinal[2])
     end
+end
+
+let phase_split_cg = vt_flash(methane, GAS_CONSTANT_SI * 110, 1000, optmethod = DescentMethods.CGDescent),
+    phase_split_bfgs = vt_flash(methane, GAS_CONSTANT_SI * 110, 1000, optmethod = DescentMethods.BFGS)
+
+    println("""
+    CG: $phase_split_cg
+    BFGS: $phase_split_bfgs
+    """)
 end
