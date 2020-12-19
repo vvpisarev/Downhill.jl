@@ -18,18 +18,19 @@ function optimize!(M::Wrapper, fdf, x0; reset = true)
 end
 
 """
-    optimize!(M::CoreMethod, fdf, x0; gtol = 1e-6, maxiter = 100)
+    optimize!(M::CoreMethod, fdf, x0; gtol = 1e-6, maxiter = 100, maxcalls = nothing, reset = true, constrain_step = nothing)
 
 Find an optimizer for `fdf`, starting with the initial approximation `x0`. 
 `fdf(x, g)` must return a tuple (f(x), ∇f(x)) and, if `g` is mutable, overwrite 
-it with the gradient.
+it with the gradient. A function `constrain_step(x0, d)` may be passed to limit 
+the step sizes.
 """
 function optimize!(M::CoreMethod, fdf, x0;
                    gtol = convert(eltype(x0), 1e-6),
                    maxiter = 100,
                    maxcalls = nothing,
                    reset = true,
-                   step_limit = nothing)
+                   constrain_step = nothing)
     if !isnothing(gtol) && gtol > 0
         M = StopByGradient(M, gtol)
     end
@@ -43,8 +44,10 @@ function optimize!(M::CoreMethod, fdf, x0;
     else
         M = LimitCalls(M, maxcalls)
     end
-    if !isnothing(step_limit)
-        M = LimitStepSize(M, step_limit)
+    if !isnothing(constrain_step)
+        M = ConstrainStepSize(M, constrain_step)
     end
     optimize!(M, fdf, x0, reset = reset)
 end
+
+infstep(x0, d) = convert(eltype(d), Inf)

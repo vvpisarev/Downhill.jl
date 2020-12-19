@@ -29,7 +29,7 @@ SteepestDescent(x::AbstractVector) = SteepestDescent(x, one(eltype(x)))
 """
 `optfn!` must be the 3-arg closure that computes fdf(x + α*d) and overwrites `M`'s gradient
 """
-function init!(::SteepestDescent{T}, optfn!, x0; reset) where {T}
+function init!(::SteepestDescent{T}, optfn!, x0; kw...) where {T}
     optfn!(x0, zero(T), x0)
     return
 end
@@ -54,18 +54,16 @@ function callfn!(M::SteepestDescent, fdf, x, α, d)
     return y, g
 end
 
-@inline function __step_init!(M::SteepestDescent, optfn!)
-    M.x, M.xpre = M.xpre, M.x
-    return
-end
-
 @inline function __descent_dir!(M::SteepestDescent)
     map!(-, M.dir, M.g)
     return M.dir
 end
 
-function __compute_step!(M::SteepestDescent, optfn!, d, maxstep)
+function step!(M::SteepestDescent, optfn!; constrain_step = infstep)
+    M.x, M.xpre = M.xpre, M.x
+    d = __descent_dir!(M)
     xpre = M.xpre
+    αmax = constrain_step(xpre, d)
     α = strong_backtracking!(optfn!, xpre, d, M.y, M.g, α = M.α, αmax = maxstep, β = 1e-4, σ = 0.1)
     return α
 end

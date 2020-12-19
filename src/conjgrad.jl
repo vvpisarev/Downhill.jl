@@ -54,7 +54,7 @@ function __descent_dir!(M::CGDescent)
     return d
 end
 
-function init!(M::CGDescent{T}, optfn!, x0; reset) where {T}
+function init!(M::CGDescent{T}, optfn!, x0; reset, constrain_step = infstep) where {T}
     y, g = optfn!(x0, zero(T), x0)
     __update_gpre!(M, M.g)
     map!(-, M.dir, M.g)
@@ -83,17 +83,16 @@ function callfn!(M::CGDescent, fdf, x, α, d)
     end
 end
 
-function __step_init!(M::CGDescent, optfn!)
+function step!(M::CGDescent, optfn!; constrain_step = infstep)
     M.x, M.xpre = M.xpre, M.x
     map!(-, M.gdiff, M.g, M.gpre)
-    return
-end
 
-function __compute_step!(M::CGDescent, optfn!, d, maxstep)
+    d = __descent_dir!(M)
     xpre = M.xpre
     M.g, M.gpre = M.gpre, M.g
     ypre = M.y
-    α = strong_backtracking!(optfn!, xpre, d, M.y, M.gpre, α = M.α, αmax = maxstep, β = 0.01, σ = 0.1)
+    maxstep = constrain_step(xpre, d)
+    α = strong_backtracking!(optfn!, xpre, d, ypre, M.gpre, α = M.α, αmax = maxstep, β = 0.01, σ = 0.1)
     fdiff = M.y - ypre
     if fdiff < 0
         M.α = 2 * fdiff / dot(d, M.gpre)

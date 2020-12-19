@@ -162,7 +162,8 @@ function logΦ(subst::BrusilovskyEoSComponent, V, RT, nmoles)
     B, C, D = nmoles .* (b, c, d)
     A = a * nmoles / RT
     return log(1 - B / V) - B / (V - B) + 
-           A / (C - D) * log((V + C) / (V + D)) + A * V / ((V + C) * (V + D))
+           A / (C - D) * log((V + C) / (V + D)) + 
+           A * V / ((V + C) * (V + D))
 end
 
 function wilson_psat(subst, RT)
@@ -194,7 +195,8 @@ const methane = BrusilovskyEoSComponent(
                     molar_mass = 0.016043)
 
 function vt_stability(subst, RT, molar_dens; 
-                      optmethod::Type{<:DescentMethods.DescentMethod}=DescentMethods.BFGS)
+                      optmethod::T = DescentMethods.BFGS
+                     ) where T<:Type{<:DescentMethods.DescentMethod}
     chempot(rho) = log(rho) - logΦ(subst, 1.0, RT, rho)
     μ0 = chempot(molar_dens)
     p_orig = brusilovsky_pressure(subst, 1/molar_dens, RT) / RT
@@ -226,9 +228,9 @@ function vt_stability(subst, RT, molar_dens;
                                          gtol = 1e-9,
                                          maxiter = 1000,
                                          maxcalls = 2000,
-                                         step_limit = maxstep)
+                                         constrain_step = maxstep)
     p_gas = brusilovsky_pressure(subst, 1/optresult.argument[1], RT) / RT
-    if p_gas < p_orig - sqrt(eps(one(p_orig))) * abs(p_orig)
+    if p_gas >= p_orig + sqrt(eps(one(p_orig))) * abs(p_orig)
         return optresult, p_gas, p_orig
     end
     rhovec[1] = rho2
@@ -237,14 +239,15 @@ function vt_stability(subst, RT, molar_dens;
                                          rhovec,
                                          gtol = 1e-9,
                                          maxiter = 1000,
-                                         maxcalls = 200, 
-                                         step_limit = maxstep)
+                                         maxcalls = 2000, 
+                                         constrain_step = maxstep)
     p_liq = brusilovsky_pressure(subst, 1/optresult.argument[1], RT) / RT
     return optresult, p_liq, p_orig
 end
 
 function vt_flash(subst, RT, molar_dens; 
-                  optmethod::Type{<:DescentMethods.DescentMethod}=DescentMethods.BFGS)
+                  optmethod::T = DescentMethods.bfgs
+                 ) where T<:Type{<:DescentMethods.DescentMethod}
     chempot(rho) = log(rho) - logΦ(subst, 1.0, RT, rho)
     μ0 = chempot(molar_dens)
     p_orig = brusilovsky_pressure(subst, 1/molar_dens, RT) / RT
@@ -264,7 +267,7 @@ function vt_flash(subst, RT, molar_dens;
 
     stabtest = vt_stability(subst, RT, molar_dens, optmethod = optmethod)
 
-    if stabtest[2] > p_orig - sqrt(eps(one(p_orig))) * abs(p_orig)
+    if stabtest[2] < p_orig + sqrt(eps(one(p_orig))) * abs(p_orig)
         return
     end
 
@@ -300,15 +303,15 @@ function vt_flash(subst, RT, molar_dens;
     gradA = DescentMethods.gradientvec(opt)
 
     let a = maxstep(rhov, (-znew[1], -1)) / 2
-        while true
+        while a > 1e-20
             arg[1] = rhov[1] - a * znew[1]
             arg[2] = 1 - a
             y, g = twophaseA!(arg, gradA)
             d = g ⋅ (znew[1], one(znew[1]))
-            if (y < A0 && d > 0) || a < 1e-20
+            if y < A0 && d > 0
                 if opt isa DescentMethods.BFGS
                     opt.xdiff .= arg .- rhov
-                    DescentMethods.reset!(opt, arg, norm(opt.xdiff) / norm(gradA))
+                    DescentMethods.reset!(opt, arg, dot(opt.xdiff, g) / dot(g, g))
                 end
                 break
             end
@@ -319,13 +322,15 @@ function vt_flash(subst, RT, molar_dens;
     optresult = DescentMethods.optimize!(opt,
                                          twophaseA!,
                                          arg,
+                                         gtol = 1e-9,
                                          maxiter = 1000,
                                          maxcalls = 2000,
-                                         step_limit = maxstep,
+                                         constrain_step = maxstep,
                                          reset = false)
 
     xfinal = optresult.argument
-    d1, d2 = xfinal[1] / xfinal[2], (rhov[1] - xfinal[1]) / (1 - xfinal[2])
+    d1 = xfinal[1] / xfinal[2]
+    d2 = (rhov[1] - xfinal[1]) / (1 - xfinal[2])
     p1 = brusilovsky_pressure(subst, 1/d1, RT)
     p2 = brusilovsky_pressure(subst, 1/d2, RT)
     if d1 < d2
@@ -335,17 +340,17 @@ function vt_flash(subst, RT, molar_dens;
     end
 end
 
-# let phase_split_cg = vt_flash(methane,
-#                               GAS_CONSTANT_SI * 110,
-#                               1000,
-#                               optmethod = DescentMethods.CGDescent),
-#     phase_split_bfgs = vt_flash(methane,
-#                                 GAS_CONSTANT_SI * 110,
-#                                 1000,
-#                                 optmethod = DescentMethods.BFGS)
+let phase_split_cg = vt_flash(methane,
+                              GAS_CONSTANT_SI * 110,
+                              1000,
+                              optmethod = DescentMethods.CGDescent),
+    phase_split_bfgs = vt_flash(methane,
+                                GAS_CONSTANT_SI * 110,
+                                1000,
+                                optmethod = DescentMethods.BFGS)
 
-#     println("""
-#     CG: $phase_split_cg
-#     BFGS: $phase_split_bfgs
-#     """)
-# end
+    println("""
+    CG: $phase_split_cg
+    BFGS: $phase_split_bfgs
+    """)
+end

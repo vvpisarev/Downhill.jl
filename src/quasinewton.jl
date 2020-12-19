@@ -40,17 +40,15 @@ function BFGS(x::AbstractVector{T}) where {T}
     return bfgs
 end
 
-function init!(M::BFGS{T}, optfn!, x0; reset) where {T}
+function init!(M::BFGS{T}, optfn!, x0; 
+               reset, constrain_step = infstep) where {T}
     optfn!(x0, zero(T), x0)
     if reset
         M.xpre, M.x = M.x, M.xpre
         M.gpre, M.g = M.g, M.gpre
         map!(-, M.d, M.gpre)
-        α = 
-        let dlen = norm(M.d)
-            sqrt(eps(T)) / dlen * minimum(abs, M.xpre)
-        end
-        α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, α = α, β = one(T)/100, σ = convert(T, 0.9))
+        αmax = constrain_step(M.xpre, M.d)
+        α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, αmax = αmax, β = one(T)/100, σ = convert(T, 0.9))
         map!(-, M.xdiff, M.x, M.xpre)
         map!(-, M.gdiff, M.g, M.gpre)
 
@@ -95,18 +93,17 @@ function __descent_dir!(M::BFGS)
     return M.d
 end
 
-@inline function __step_init!(M::BFGS, optfn!)
+function step!(M::BFGS{T}, optfn!; constrain_step = infstep) where {T}
     #=
     argument and gradient from the end of the last
     iteration are stored into `xpre` and `gpre`
     =#
     M.gpre, M.g = M.g, M.gpre
     M.xpre, M.x = M.x, M.xpre
-    return
-end
 
-function __compute_step!(M::BFGS, optfn!, d, maxstep)
     x, xpre, g, gpre, invH = M.x, M.xpre, M.g, M.gpre, M.invH
+    d = __descent_dir!(M)
+    maxstep = constrain_step(xpre, d)
     α = strong_backtracking!(optfn!, xpre, d, M.y, gpre, αmax = maxstep, β = 0.01, σ = 0.9)
     #=
     BFGS update:

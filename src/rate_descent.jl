@@ -22,7 +22,7 @@ end
 
 FixedRateDescent(x::AbstractVector) = FixedRateDescent(x, convert(eltype(x), 0.01))
 
-function init!(M::FixedRateDescent{T}, optfn!, x0; reset) where {T}
+function init!(M::FixedRateDescent{T}, optfn!, x0; kw...) where {T}
     optfn!(x0, zero(T), x0)
     return
 end
@@ -46,15 +46,10 @@ end
     return y, g
 end
 
-function __step_init!(M::FixedRateDescent, optfn!) end
-
-function __descent_dir!(M::FixedRateDescent)
-    rmul!(M.g, -1)
-    return M.g
-end
-
-function __compute_step!(M::FixedRateDescent, optfn!, d, maxstep)
-    s = min(maxstep, M.α)
+function step!(M::FixedRateDescent, optfn!; constrain_step = infstep)
+    d = rmul!(M.g, -1)
+    maxstep = constrain_step(M.x, d)
+    s = M.α <= maxstep ? M.α : maxstep / 2
     optfn!(M.x, s, d)
     return s
 end
@@ -101,7 +96,7 @@ function MomentumDescent(x::AbstractVector; learn_rate::Real, decay_rate::Real)
     MomentumDescent(similar(x), similar(x), similar(x), convert(eltype(x), learn_rate), convert(eltype(x), decay_rate))
 end
 
-function init!(M::MomentumDescent{T}, optfn!, x0; reset) where {T}
+function init!(M::MomentumDescent{T}, optfn!, x0; kw...) where {T}
     optfn!(x0, zero(T), x0)
     fill!(M.v, zero(T))
     return
@@ -130,11 +125,13 @@ end
     return y, g
 end
 
-function step!(M::MomentumDescent, optfn!)
+function step!(M::MomentumDescent, optfn!; constrain_step = infstep)
     map!(M.v, M.v, M.g) do v, g
         M.decay_rate * v - M.learn_rate * g
     end
-    optfn!(M.x, 1.0, M.v)
+    maxstep = constrain_step(M.x, M.v)
+    s = maxstep > 1 ? one(maxstep) : maxstep / 2
+    optfn!(M.x, s, M.v)
     return M.learn_rate
 end
 
@@ -180,7 +177,7 @@ function NesterovMomentum(x::AbstractVector; learn_rate::Real, decay_rate::Real)
     NesterovMomentum(similar(x), similar(x), similar(x), convert(eltype(x), learn_rate), convert(eltype(x), decay_rate))
 end
 
-function init!(M::NesterovMomentum{T}, optfn!, x0; reset) where {T}
+function init!(M::NesterovMomentum{T}, optfn!, x0; kw...) where {T}
     optfn!(x0, zero(T), x0)
     fill!(M.v, zero(T))
     return
@@ -209,12 +206,17 @@ end
     return y, g
 end
 
-function step!(M::NesterovMomentum, optfn!)
-    optfn!(M.x, M.decay_rate, M.v)
+function step!(M::NesterovMomentum, optfn!; constrain_step = infstep)
+    maxstep = constrain_step(M.x, M.v)
+    s = maxstep > M.decay_rate ? M.decay_rate : maxstep / 2
+    optfn!(M.x, s, M.v)
     map!(M.v, M.v, M.g) do v, g
         M.decay_rate * v - M.learn_rate * g
     end
-    optfn!(M.x, -M.learn_rate, M.g)
+    d = rmul!(M.g, -1)
+    maxstep = constrain_step(M.x, d)
+    s = maxstep > M.learn_rate ? M.learn_rate : maxstep / 2
+    optfn!(M.x, s, d)
     return M.learn_rate
 end
 
