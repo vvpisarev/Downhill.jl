@@ -30,7 +30,8 @@ function optimize!(M::CoreMethod, fdf, x0;
                    maxiter = 100,
                    maxcalls = nothing,
                    reset = true,
-                   constrain_step = nothing)
+                   constrain_step = nothing,
+                   track_io = nothing)
     if !isnothing(gtol) && gtol > 0
         M = StopByGradient(M, gtol)
     end
@@ -46,6 +47,9 @@ function optimize!(M::CoreMethod, fdf, x0;
     end
     if !isnothing(constrain_step)
         M = ConstrainStepSize(M, constrain_step)
+    end
+    if track_io isa IO
+        M = TrackPath(M, track_io)
     end
     optimize!(M, fdf, x0, reset = reset)
 end

@@ -48,14 +48,17 @@ function init!(M::BFGS{T}, optfn!, x0;
         M.gpre, M.g = M.g, M.gpre
         map!(-, M.d, M.gpre)
         αmax = constrain_step(M.xpre, M.d)
-        α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, αmax = αmax, β = one(T)/100, σ = convert(T, 0.9))
+        α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, αmax = αmax, β = one(T)/100, σ = convert(T, 0.5))
         map!(-, M.xdiff, M.x, M.xpre)
         map!(-, M.gdiff, M.g, M.gpre)
 
         invH = M.invH
         nr, nc = size(invH)
-        for j in 1:nc, i in 1:nr
-            invH[i, j] = (i == j) * abs(M.xdiff[i] / M.gdiff[j])
+        scale = dot(M.xdiff, M.gdiff) / dot(M.gdiff, M.gdiff)
+        fill!(invH, 0)
+        for i in 1:nc
+            elt = M.xdiff[i] / M.gdiff[i]
+            invH[i, i] = 1e-5 < elt / scale < 1e5 ? elt : scale
         end
     end
     return

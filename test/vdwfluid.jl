@@ -230,7 +230,8 @@ function vt_stability(subst, RT, molar_dens;
                                          maxcalls = 2000,
                                          constrain_step = maxstep)
     p_gas = brusilovsky_pressure(subst, 1/optresult.argument[1], RT) / RT
-    if p_gas >= p_orig + sqrt(eps(one(p_orig))) * abs(p_orig)
+    if p_gas >= p_orig && 
+        norm(x - y for(x, y) in zip(rhovec, optresult.argument)) > 1e-5 * norm(rhovec) #+ sqrt(eps(one(p_orig))) * abs(p_orig)
         return optresult, p_gas, p_orig
     end
     rhovec[1] = rho2
@@ -246,7 +247,7 @@ function vt_stability(subst, RT, molar_dens;
 end
 
 function vt_flash(subst, RT, molar_dens; 
-                  optmethod::T = DescentMethods.bfgs
+                  optmethod::T = DescentMethods.BFGS
                  ) where T<:Type{<:DescentMethods.DescentMethod}
     chempot(rho) = log(rho) - logΦ(subst, 1.0, RT, rho)
     μ0 = chempot(molar_dens)
@@ -267,7 +268,7 @@ function vt_flash(subst, RT, molar_dens;
 
     stabtest = vt_stability(subst, RT, molar_dens, optmethod = optmethod)
 
-    if stabtest[2] < p_orig + sqrt(eps(one(p_orig))) * abs(p_orig)
+    if stabtest[2] < p_orig #+ sqrt(eps(one(p_orig))) * abs(p_orig)
         return
     end
 
@@ -319,15 +320,18 @@ function vt_flash(subst, RT, molar_dens;
         end
     end
 
+    track_file = open("track.vtflash.$(optmethod).$(RT / GAS_CONSTANT_SI)K.$(round(molar_dens, digits=2))mol_m3.txt", "w")
     optresult = DescentMethods.optimize!(opt,
                                          twophaseA!,
                                          arg,
                                          gtol = 1e-9,
                                          maxiter = 1000,
-                                         maxcalls = 2000,
+                                         maxcalls = 20000,
                                          constrain_step = maxstep,
-                                         reset = false)
+                                         reset = false,
+                                         track_io = track_file)
 
+    close(track_file)
     xfinal = optresult.argument
     d1 = xfinal[1] / xfinal[2]
     d2 = (rhov[1] - xfinal[1]) / (1 - xfinal[2])
