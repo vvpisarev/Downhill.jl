@@ -191,3 +191,8 @@ function callfn!(M::TrackPath, fdf, x, α, d)
     println(M.file, ' ', y, ' ', join(g, ' '))
     return fg
 end
+
+function step!(M::TrackPath, args...; kw...)
+    println(M.file)
+    step!(M.descent, args...; kw...)
+end

@@ -312,7 +312,7 @@ function vt_flash(subst, RT, molar_dens;
             if y < A0 && d > 0
                 if opt isa DescentMethods.BFGS
                     opt.xdiff .= arg .- rhov
-                    DescentMethods.reset!(opt, arg, dot(opt.xdiff, g) / dot(g, g))
+                    DescentMethods.reset!(opt, arg, abs(dot(opt.xdiff, g)) / dot(g, g))
                 end
                 break
             end

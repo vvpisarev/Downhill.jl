@@ -48,7 +48,7 @@ function init!(M::BFGS{T}, optfn!, x0;
         M.gpre, M.g = M.g, M.gpre
         map!(-, M.d, M.gpre)
         αmax = constrain_step(M.xpre, M.d)
-        α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, αmax = αmax, β = one(T)/100, σ = convert(T, 0.5))
+        α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, αmax = αmax, β = one(T)/100, σ = convert(T, 0.1))
         map!(-, M.xdiff, M.x, M.xpre)
         map!(-, M.gdiff, M.g, M.gpre)
 
