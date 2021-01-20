@@ -16,15 +16,14 @@ using DescentMethods: argumentvec, gradientvec, step_origin
         bfgs,
     )
 
-    @testset "argumentvec" for descent in descent_methods
-        @test size(argumentvec(descent)) == size(init_vec)
-    end
-
-    @testset "gradientvec" for descent in descent_methods
-        @test size(gradientvec(descent)) == size(init_vec)
-    end
-
-    @testset "step_origin" for descent in descent_methods
-        @test size(step_origin(descent)) == size(init_vec)
+    interface = (
+        argumentvec,
+        gradientvec,
+        step_origin
+    )
+    @testset "$(string(interface_func))" for interface_func in interface
+        @testset "$(typeof(descent).name)" for descent in descent_methods
+            @test size(interface_func(descent)) == size(init_vec)
+        end
     end
 end
