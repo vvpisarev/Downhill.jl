@@ -1,5 +1,3 @@
-include("utils.jl")
-
 """
     convex_quadratic(Q, b)
 
