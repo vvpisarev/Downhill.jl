@@ -1,25 +1,30 @@
 @testset "Constructors for core methods" begin
-    @testset "From Float vectors" begin
-        @test SteepestDescent([1.0, 0]) isa CoreMethod
-        @test HyperGradDescent([1.0, 0]) isa CoreMethod
-        @test FixedRateDescent([1.0, 0]) isa CoreMethod
-        @test CGDescent([1.0, 0]) isa CoreMethod
-        @test BFGS([1.0, 0]) isa CoreMethod
+    types = (
+        SteepestDescent,
+        HyperGradDescent,
+        FixedRateDescent,
+        CGDescent,
+        BFGS
+    )
+
+    @testset "From Float vector" begin
+        v = [1.0, 0]
+        @testset "$T" for T in types
+            @test T(v) isa CoreMethod
+        end
     end
 
-    @testset "From Int vectors" begin
-        @test SteepestDescent([1, 0]) isa CoreMethod
-        @test HyperGradDescent([1, 0]) isa CoreMethod
-        @test FixedRateDescent([1, 0]) isa CoreMethod
-        @test CGDescent([1, 0]) isa CoreMethod
-        @test BFGS([1, 0]) isa CoreMethod
+    @testset "From Int vector" begin
+        v = [1, 0]
+        @testset "$T" for T in types
+            @test T(v) isa CoreMethod
+        end
     end
 
-    @testset "From Rational vectors" begin
-        @test SteepestDescent([1//1, 0]) isa CoreMethod
-        @test HyperGradDescent([1//1, 0]) isa CoreMethod
-        @test FixedRateDescent([1//1, 0]) isa CoreMethod
-        @test CGDescent([1//1, 0]) isa CoreMethod
-        @test BFGS([1//1, 0]) isa CoreMethod
+    @testset "From Rational vector" begin
+        v = [1//1, 0]
+        @testset "$T" for T in types
+            @test T(v) isa CoreMethod
+        end
     end
 end
