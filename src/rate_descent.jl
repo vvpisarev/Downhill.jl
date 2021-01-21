@@ -17,10 +17,11 @@ end
 @inline step_origin(M::FixedRateDescent) = M.x
 
 function FixedRateDescent(x::AbstractVector, α::Real)
-    FixedRateDescent(similar(x), similar(x), convert(eltype(x), α))
+    F = float(eltype(x))
+    FixedRateDescent(similar(x, F), similar(x, F), convert(F, α))
 end
 
-FixedRateDescent(x::AbstractVector) = FixedRateDescent(x, convert(eltype(x), 0.01))
+FixedRateDescent(x::AbstractVector) = FixedRateDescent(x, 1//100)
 
 function init!(M::FixedRateDescent{T}, optfn!, x0; kw...) where {T}
     optfn!(x0, zero(T), x0)

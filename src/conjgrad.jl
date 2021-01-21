@@ -23,16 +23,16 @@ end
 @inline step_origin(M::CGDescent) = M.xpre
 
 function CGDescent(x::AbstractVector)
-    T = eltype(x)
-    CGDescent(similar(x),
-              similar(x),
-              similar(x),
-              similar(x),
-              similar(x),
-              similar(x),
-              zero(T),
-              convert(T, 0.01),
-              convert(T, 0.01)
+    F = float(eltype(x))
+    CGDescent(similar(x, F),
+              similar(x, F),
+              similar(x, F),
+              similar(x, F),
+              similar(x, F),
+              similar(x, F),
+              zero(F),
+              convert(F, 0.01),
+              convert(F, 0.01)
              )
 end
 

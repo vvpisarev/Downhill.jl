@@ -34,7 +34,7 @@ function BFGS(x::AbstractVector{T}) where {T}
                 similar(x, F),
                 similar(x, F),
                 similar(x, F),
-                zero(T)
+                zero(F)
                )
     reset!(bfgs)
     return bfgs

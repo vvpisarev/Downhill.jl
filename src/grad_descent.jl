@@ -21,10 +21,11 @@ end
 @inline step_origin(M::SteepestDescent) = M.xpre
 
 function SteepestDescent(x::AbstractVector, α::Real)
-    SteepestDescent(similar(x), similar(x), similar(x), similar(x), zero(eltype(x)), convert(eltype(x), α))
+    F = float(eltype(x))
+    SteepestDescent(similar(x, F), similar(x, F), similar(x, F), similar(x, F), zero(F), convert(F, α))
 end
 
-SteepestDescent(x::AbstractVector) = SteepestDescent(x, one(eltype(x)))
+SteepestDescent(x::AbstractVector) = SteepestDescent(x, 1)
 
 """
 `optfn!` must be the 3-arg closure that computes fdf(x + α*d) and overwrites `M`'s gradient
