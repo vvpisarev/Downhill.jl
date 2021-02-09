@@ -31,7 +31,13 @@ function strong_backtracking!(fdf, x0, d, y0, grad0;
     while true
         y, grad = fdf(x0, α, d)
         g = dot(grad, d)
-        if y > y0 + α * wolfe1 || y >= y_prev # x >= NaN is always false
+        Δyp = (g + g0) * α / 2 # parabolic approximation
+        if abs(Δyp) < ϵ
+            Δy = Δyp
+        else
+            Δy = y - y0
+        end
+        if Δy > α * wolfe1 || y >= y_prev + ϵ # x >= NaN is always false
             αlo, αhi, ylo, yhi, glo, ghi = α_prev, α, y_prev, y, g_prev, g
             break
         end
