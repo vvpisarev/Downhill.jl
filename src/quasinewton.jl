@@ -108,20 +108,24 @@ function step!(M::BFGS{T}, optfn!; constrain_step = infstep) where {T}
     d = __descent_dir!(M)
     maxstep = constrain_step(xpre, d)
     α = strong_backtracking!(optfn!, xpre, d, M.y, gpre, αmax = maxstep, β = 0.01, σ = 0.9)
-    #=
-    BFGS update:
-             δγ'B + Bγδ'   ⌈    γ'Bγ ⌉ δδ'
-    B <- B - ----------- + |1 + -----| ---
-                 δ'γ       ⌊     δ'γ ⌋ δ'γ
-    =#
-    δ, γ = M.xdiff, M.gdiff
-    map!(-, γ, g, gpre)
-    map!(-, δ, x, xpre)
-    denom = dot(δ, γ)
-    δscale = 1 + dot(γ, invH, γ) / denom
-    # d <- B * γ
-    mul!(d, invH, γ, 1, 0)
-    invH .= invH .- (δ .* d' .+ d .* δ') ./ denom .+ δscale .* δ .* δ' ./ denom
+    if α > 0
+        #=
+        BFGS update:
+                δγ'B + Bγδ'   ⌈    γ'Bγ ⌉ δδ'
+        B <- B - ----------- + |1 + -----| ---
+                    δ'γ       ⌊     δ'γ ⌋ δ'γ
+        =#
+        δ, γ = M.xdiff, M.gdiff
+        map!(-, γ, g, gpre)
+        map!(-, δ, x, xpre)
+        denom = dot(δ, γ)
+        δscale = 1 + dot(γ, invH, γ) / denom
+        # d <- B * γ
+        mul!(d, invH, γ, 1, 0)
+        invH .= invH .- (δ .* d' .+ d .* δ') ./ denom .+ δscale .* δ .* δ' ./ denom
+    else
+        fill!(M.xdiff, 0)
+    end
     return α
 end
 
@@ -144,4 +148,15 @@ end
         copy!(M.g, g)
     end
     return
+end
+
+function stopcond(M::BFGS{T}) where {T}
+    rtol_x = 16 * eps(T)
+    xdiff, xpre = M.xdiff, M.xpre
+    for i in eachindex(xdiff, xpre)
+        if abs(xdiff[i]) > rtol_x * abs(xpre[i])
+            return false
+        end
+    end
+    return true
 end

@@ -53,7 +53,11 @@ function strong_backtracking!(fdf, x0, d, y0, grad0;
         nbracket == nbracket_max && error("Failed to find bracketing")
         # cubic interpolation (Nocedal & Wright 2nd ed., p.59)
         Δα = α - α_prev
-        Δα == 0 && error("Cannot bracket with zero step")
+
+        # return 0 signaling that bracketing failed
+        if iszero(Δα)
+            return Δα
+        end
         d1 = g_prev + g - 3 * (y - y_prev) / Δα
         det = d1^2 - g * g_prev
         if det < 0
