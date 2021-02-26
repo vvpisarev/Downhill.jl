@@ -9,6 +9,7 @@ include("grad_descent.jl")
 include("rate_descent.jl")
 include("hypergradient.jl")
 include("quasinewton.jl")
+include("chol_bfgs.jl")
 include("optimize.jl")
 include("conjgrad.jl")
 
