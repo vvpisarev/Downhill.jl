@@ -1,4 +1,36 @@
 export CholBFGS
+
+function mcholesky!(A::AbstractMatrix{T}) where T
+    δ = convert(T, 1e-3)
+    β = convert(T, 1e3)
+    n, m = size(A)
+    m == n || throw(DimensionMismatch("Matrix is not square"))
+    θ = zero(T)
+    u = UpperTriangular(A)
+    c = u
+    @inbounds for j in 1:n
+        c_jj = A[j,j]
+        θ = zero(c_jj)
+        for k in 1:j-1
+            u[k,j] /= u[k,k]
+        end
+        for i in j+1:n
+            c_ij = c[j,i]
+            for k in 1:j-1
+                c_ij -= u[k,j] * c[k,i] / u[k,k]
+            end
+            θ = max(abs(c_ij), θ)
+            c[j,i] = c_ij
+        end
+        d_j = max(abs(c_jj), (θ / β)^2, δ)
+        u[j,j] = sqrt(d_j)
+        for i in j+1:n
+            c[i,i] -= (c[j,i] / u[j,j])^2
+        end
+    end
+    return A
+end
+
 """
     CholBFGS
 Quasi-Newton descent method.
@@ -46,6 +78,8 @@ end
 function init!(M::CholBFGS{T}, optfn!, x0; 
                reset, constrain_step = infstep) where {T}
     optfn!(x0, zero(T), x0)
+    M.xpre .= x0
+    M.xdiff .= abs.(x0) .+ 1
     if reset > 0
         M.xpre, M.x = M.x, M.xpre
         M.gpre, M.g = M.g, M.gpre
@@ -86,6 +120,14 @@ function reset!(M::CholBFGS, x0, scale::Real=1)
     return
 end
 
+function reset!(M::CholBFGS, x0, init_H::AbstractMatrix)
+    copy!(M.x, x0)
+    H = M.hess.factors
+    copy!(H, init_H)
+    mcholesky!(H)
+    return
+end
+
 @inline function callfn!(M::CholBFGS, fdf, x, α, d)
     __update_arg!(M, x, α, d)
     y, g = fdf(M.x, M.g)
@@ -123,16 +165,17 @@ function step!(M::CholBFGS, optfn!; constrain_step = infstep)
         γ .= g .- gpre
         δ .= x .- xpre
 
+        U = UpperTriangular(H.factors)
         #=
         H = H.U' * H.U
         d <- H.U * δ
         δ'Hδ = d ⋅ d
         =#
-        mul!(d, H.U, δ)
+        mul!(d, U, δ)
         d1 = dot(d, d)
         d2 = dot(δ, γ)
         # δ <- H.U' * H.U * δ = H * δ
-        mul!(δ, H.U', d)
+        mul!(δ, U', d)
         rdiv!(δ, sqrt(d1))
         rdiv!(γ, sqrt(d2))
         lowrankupdate!(H, γ)
