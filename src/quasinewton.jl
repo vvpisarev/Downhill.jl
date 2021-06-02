@@ -26,7 +26,7 @@ end
 
 function BFGS(x::AbstractVector{T}) where {T}
     F = float(T)
-    bfgs = BFGS(similar(x, F, (length(x), length(x))),
+    bfgs = BFGS(sqmatr(x, F),
                 similar(x, F),
                 similar(x, F),
                 similar(x, F),

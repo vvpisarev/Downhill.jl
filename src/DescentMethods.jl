@@ -2,6 +2,7 @@ module DescentMethods
 
 using LinearAlgebra
 
+include("utils.jl")
 include("abstract_types.jl")
 include("wrappers.jl")
 include("linesearch.jl")
