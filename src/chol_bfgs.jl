@@ -70,7 +70,7 @@ function CholBFGS(x::AbstractVector{T}) where {T}
                 similar(x, F),
                 similar(x, F),
                 similar(x, F),
-                zero(T)
+                zero(F)
                )
     return bfgs
 end
