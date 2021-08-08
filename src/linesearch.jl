@@ -28,10 +28,18 @@ function strong_backtracking!(fdf, x0, d, y0, grad0;
 
     # bracketing phase
     min_factor = 17/16 # min. factor to expand bracketing interval
-    while true
+
+    nbracket_max = 200
+    for nbracket in 1:nbracket_max
         y, grad = fdf(x0, α, d)
         g = dot(grad, d)
-        if y > y0 + α * wolfe1 || y >= y_prev # x >= NaN is always false
+        Δyp = (g + g0) * α / 2 # parabolic approximation
+        if abs(Δyp) < ϵ
+            Δy = Δyp
+        else
+            Δy = y - y0
+        end
+        if Δy > α * wolfe1 || y >= y_prev + ϵ # x >= NaN is always false
             αlo, αhi, ylo, yhi, glo, ghi = α_prev, α, y_prev, y, g_prev, g
             break
         end
@@ -41,8 +49,15 @@ function strong_backtracking!(fdf, x0, d, y0, grad0;
             αlo, αhi, ylo, yhi, glo, ghi = α_prev, α, y_prev, y, g_prev, g
             break
         end
+
+        nbracket == nbracket_max && error("Failed to find bracketing")
         # cubic interpolation (Nocedal & Wright 2nd ed., p.59)
         Δα = α - α_prev
+
+        # return 0 signaling that bracketing failed
+        if iszero(Δα)
+            return Δα
+        end
         d1 = g_prev + g - 3 * (y - y_prev) / Δα
         det = d1^2 - g * g_prev
         if det < 0
