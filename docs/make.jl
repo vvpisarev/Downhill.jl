@@ -13,3 +13,7 @@ makedocs(
         "Basic Functions" => "functions.md",
     ]
 )
+
+deploydocs(
+    repo = "github.com/vvpisarev/DescentMethods.jl.git",
+)
