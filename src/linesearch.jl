@@ -1,17 +1,39 @@
 # fdf(x, α, d) = f(x + α * d), ∇f(x + α * d)
+"""
+    DescentMethods.strong_backtracking!(fdf, x₀, d, [y₀, g₀]; [α, αmax, β, σ])
+
+Find `α` such that `f(x₀ + αd) ≤ f(x₀) + β α d⋅∇f(x)` and `|d⋅∇f(x₀ + αd)| ≤ σ|d⋅∇f(x₀)|`
+    (strong Wolfe conditions) using the backtracking line search with cubic interpolation
+    and Hager-Zhang approximation when steps are very small. Optionally, `y₀ = f(x₀)` and
+    `g₀ = ∇f(x₀)` may be provided to avoid recalculation.
+
+# Arguments
+- `fdf`: a function `fdf(x, α, d)` returning a tuple `f(x + α * d), ∇f(x + α * d)` where `f`
+    is the minimized function
+- `x₀::AbstractVector`: the initial point
+- `d::AbstractVector`: the search direction. Must be a descent direction, i.e. `d⋅∇f(x₀) < 0`
+- `y₀`: (optional) the value of `f(x₀)` if it is known beforehand
+- `g₀`: (optional) the value of `∇f(x₀)` if it is known beforehand
+
+# Keywords
+- `α=1`: the initial value of `α`
+- `αmax=Inf`: the maximum allowed value of α
+- `β=1e-4`: the coefficient in Wolfe conditions
+- `σ=0.5`: the coefficient in Wolfe conditions
+"""
 function strong_backtracking!(
-    fdf::F, x0, d, y0, grad0;
+    fdf::F, x0, d, y0::T, grad0;
     α = one(y0),
-    αmax = convert(typeof(y0), Inf),
-    β = convert(typeof(y0), 1e-4),
-    σ = convert(typeof(y0), 0.5)
-) where {F}
+    αmax = convert(T, Inf),
+    β = convert(T, 1e-4),
+    σ = convert(T, 0.5)
+) where {F,T}
     α = min(α, αmax / 2)
     α_prev = zero(α)
     y_prev = y0
     ylo = y_prev
-    yhi = convert(typeof(y0), NaN)
-    αlo = αhi = convert(typeof(y0), NaN)
+    yhi = convert(T, NaN)
+    αlo = αhi = convert(T, NaN)
     g0 = dot(grad0, d)
     @assert g0 < 0 "derivative is non-negative: $g0"
 
@@ -119,12 +141,12 @@ function strong_backtracking!(
 end
 
 function strong_backtracking!(
-    fdf, x0, d;
-    α = one(eltype(d)),
-    αmax = convert(eltype(d), Inf),
-    β = convert(eltype(d), 1e-4),
-    σ = convert(eltype(d), 0.5)
-)
-    y0, grad0 = fdf(x0, zero(eltype(d)), d)
+    fdf::F, x0::AbstractVector, d::AbstractVector{T};
+    α = one(T),
+    αmax = convert(T, Inf),
+    β = convert(T, 1e-4),
+    σ = convert(T, 0.5)
+) where {F,T}
+    y0, grad0 = fdf(x0, zero(T), d)
     return strong_backtracking!(fdf, x0, d, y0, grad0, α = α, αmax = αmax, β = β, σ = σ)
 end

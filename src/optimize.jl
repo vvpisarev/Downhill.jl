@@ -23,7 +23,7 @@ function optimize!(M::Wrapper, fdf, x0; reset=true)
 end
 
 """
-    optimize!(M::CoreMethod, fdf, x0; gtol = 1e-6, maxiter = 100, maxcalls = nothing, reset = true, constrain_step = nothing)
+    optimize!(M::CoreMethod, fdf, x0; gtol=1e-6, maxiter=100, maxcalls=nothing, reset=true, constrain_step=nothing)
 
 Find an optimizer for `fdf`, starting with the initial approximation `x0`.
 `fdf(x, g)` must return a tuple (f(x), ∇f(x)) and, if `g` is mutable, overwrite
