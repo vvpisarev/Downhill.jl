@@ -1,9 +1,7 @@
-export FixedRateDescent, MomentumDescent, NesterovMomentum
-
 """
     FixedRateDescent
 
-Descent method which minimizes the objective function in the direction 
+Descent method which minimizes the objective function in the direction
 of antigradient at each step.
 """
 mutable struct FixedRateDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
@@ -21,7 +19,7 @@ function FixedRateDescent(x::AbstractVector, α::Real)
     FixedRateDescent(similar(x, F), similar(x, F), convert(F, α))
 end
 
-FixedRateDescent(x::AbstractVector) = FixedRateDescent(x, 1//100)
+FixedRateDescent(x::AbstractVector) = FixedRateDescent(x, 0.01)
 
 function init!(M::FixedRateDescent{T}, optfn!, x0; kw...) where {T}
     optfn!(x0, zero(T), x0)
@@ -79,7 +77,7 @@ end
 """
     MomentumDescent
 
-Descent method which minimizes the objective function in the direction 
+Descent method which minimizes the objective function in the direction
 of antigradient at each step.
 """
 mutable struct MomentumDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
@@ -92,31 +90,50 @@ end
 
 @inline gradientvec(M::MomentumDescent) = M.g
 @inline argumentvec(M::MomentumDescent) = M.x
+@inline step_origin(M::MomentumDescent) = M.x
 
-function MomentumDescent(x::AbstractVector; learn_rate::Real, decay_rate::Real)
-    MomentumDescent(similar(x), similar(x), similar(x), convert(eltype(x), learn_rate), convert(eltype(x), decay_rate))
+function MomentumDescent(
+    x::AbstractVector;
+    learn_rate::Real = 0.01, decay_rate::Real = 0.01
+)
+    F = float(eltype(x))
+    return MomentumDescent(
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        convert(F, learn_rate),
+        convert(F, decay_rate),
+    )
 end
 
 function init!(M::MomentumDescent{T}, optfn!, x0; kw...) where {T}
     optfn!(x0, zero(T), x0)
     fill!(M.v, zero(T))
-    return
+    return M
 end
 
 @inline function reset!(M::MomentumDescent)
-    fill!(M.v, 0)
-    return
+    fill!(M.v, false)
+    return M
 end
 
-function reset!(M::MomentumDescent, x0, learn_rate = M.learn_rate, decay_rate = M.decay_rate)
-    if length(M.x) != length(x0)
-        foreach((M.x, M.g, M.v)) do v
-            resize!(v, length(x0))
+function reset!(
+    M::MomentumDescent,
+    x0,
+    learn_rate = M.learn_rate,
+    decay_rate = M.decay_rate,
+)
+    n = length(x0)
+    if length(M.x) != n
+        for v in (M.x, M.g, M.v)
+            resize!(v, n)
         end
     end
+    M.v .= false
+    M.x .= x0
     M.learn_rate = learn_rate
     M.decay_rate = decay_rate
-    return
+    return M
 end
 
 @inline function callfn!(M::MomentumDescent, fdf, x, α, d)
@@ -160,7 +177,7 @@ end
 """
     NesterovMomentum
 
-Descent method which minimizes the objective function in the direction 
+Descent method which minimizes the objective function in the direction
 of antigradient at each step.
 """
 mutable struct NesterovMomentum{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
@@ -173,31 +190,40 @@ end
 
 @inline gradientvec(M::NesterovMomentum) = M.g
 @inline argumentvec(M::NesterovMomentum) = M.x
+@inline step_origin(M::NesterovMomentum) = M.x
 
-function NesterovMomentum(x::AbstractVector; learn_rate::Real, decay_rate::Real)
-    NesterovMomentum(similar(x), similar(x), similar(x), convert(eltype(x), learn_rate), convert(eltype(x), decay_rate))
+function NesterovMomentum(x::AbstractVector; learn_rate::Real=0.01, decay_rate::Real=0.01)
+    F = float(eltype(x))
+    return NesterovMomentum(
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        convert(F, learn_rate),
+        convert(F, decay_rate),
+    )
 end
 
 function init!(M::NesterovMomentum{T}, optfn!, x0; kw...) where {T}
     optfn!(x0, zero(T), x0)
     fill!(M.v, zero(T))
-    return
+    return M
 end
 
 @inline function reset!(M::NesterovMomentum)
-    fill!(M.v, 0)
-    return
+    fill!(M.v, false)
+    return M
 end
 
-function reset!(M::NesterovMomentum, x0, learn_rate = M.learn_rate, decay_rate = M.decay_rate)
-    if length(M.x) != length(x0)
-        foreach((M.x, M.g, M.v)) do v
-            resize!(v, length(x0))
+function reset!(M::NesterovMomentum, x0, learn_rate=M.learn_rate, decay_rate=M.decay_rate)
+    n = length(x0)
+    if length(M.x) != n
+        for v in (M.x, M.g, M.v)
+            resize!(v, n)
         end
     end
     M.learn_rate = learn_rate
     M.decay_rate = decay_rate
-    return
+    return M
 end
 
 @inline function callfn!(M::NesterovMomentum, fdf, x, α, d)

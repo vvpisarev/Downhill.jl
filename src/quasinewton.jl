@@ -1,5 +1,3 @@
-export BFGS
-
 """
     BFGS
 
@@ -26,29 +24,35 @@ end
 
 function BFGS(x::AbstractVector{T}) where {T}
     F = float(T)
-    bfgs = BFGS(sqmatr(x, F),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                zero(F)
-               )
+    bfgs = BFGS(
+        sqmatr(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        zero(F)
+    )
     reset!(bfgs)
     return bfgs
 end
 
-function init!(M::BFGS{T}, optfn!, x0; 
-               reset, constrain_step = infstep) where {T}
+function init!(
+    M::BFGS{T}, optfn!, x0;
+    reset, constrain_step = infstep
+) where {T}
     optfn!(x0, zero(T), x0)
     if reset
         M.xpre, M.x = M.x, M.xpre
         M.gpre, M.g = M.g, M.gpre
         map!(-, M.d, M.gpre)
         αmax = constrain_step(M.xpre, M.d)
-        α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, αmax = αmax, β = one(T)/100, σ = convert(T, 0.1))
+        α = strong_backtracking!(
+            optfn!, M.xpre, M.d, M.y, M.gpre;
+            αmax=αmax, β=one(T)/100, σ=one(T)/10
+        )
         map!(-, M.xdiff, M.x, M.xpre)
         map!(-, M.gdiff, M.g, M.gpre)
 
@@ -61,7 +65,7 @@ function init!(M::BFGS{T}, optfn!, x0;
             invH[i, i] = 1e-5 < elt / scale < 1e5 ? elt : scale
         end
     end
-    return
+    return M
 end
 
 @inline function reset!(M::BFGS)
@@ -70,7 +74,7 @@ end
     for j in 1:nc, i in 1:nr
         invH[i, j] = i == j
     end
-    return
+    return M
 end
 
 function reset!(M::BFGS, x0, scale::Real=1)
@@ -80,7 +84,7 @@ function reset!(M::BFGS, x0, scale::Real=1)
     for j in 1:nc, i in 1:nr
         invH[i, j] = (i == j) * scale
     end
-    return
+    return M
 end
 
 @inline function callfn!(M::BFGS, fdf, x, α, d)
@@ -96,7 +100,7 @@ function __descent_dir!(M::BFGS)
     return M.d
 end
 
-function step!(M::BFGS{T}, optfn!; constrain_step = infstep) where {T}
+function step!(M::BFGS, optfn!::F; constrain_step::S=infstep) where {F,S}
     #=
     argument and gradient from the end of the last
     iteration are stored into `xpre` and `gpre`
@@ -112,7 +116,7 @@ function step!(M::BFGS{T}, optfn!; constrain_step = infstep) where {T}
         #=
         BFGS update:
                 δγ'B + Bγδ'   ⌈    γ'Bγ ⌉ δδ'
-        B <- B - ----------- + |1 + -----| ---
+        B <- B - ---------- + |1 + -----| ---
                     δ'γ       ⌊     δ'γ ⌋ δ'γ
         =#
         δ, γ = M.xdiff, M.gdiff
@@ -133,21 +137,21 @@ end
     map!(M.x, d, x) do a, b
         muladd(α, a, b)
     end
-    return
+    return M.x
 end
 
 @inline function __update_arg!(M::BFGS, x)
     if x !== M.x
         copy!(M.x, x)
     end
-    return
+    return M.x
 end
 
 @inline function __update_grad!(M::BFGS, g)
     if M.g !== g
         copy!(M.g, g)
     end
-    return
+    return M.g
 end
 
 function stopcond(M::BFGS{T}) where {T}

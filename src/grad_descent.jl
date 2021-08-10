@@ -1,9 +1,7 @@
-export SteepestDescent
-
 """
     SteepestDescent
 
-Descent method which minimizes the objective function in the direction 
+Descent method which minimizes the objective function in the direction
 of antigradient at each step.
 """
 mutable struct SteepestDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
@@ -56,7 +54,7 @@ function callfn!(M::SteepestDescent, fdf, x, α, d)
 end
 
 @inline function __descent_dir!(M::SteepestDescent)
-    map!(-, M.dir, M.g)
+    M.dir .= .-M.g
     return M.dir
 end
 
@@ -65,7 +63,7 @@ function step!(M::SteepestDescent, optfn!; constrain_step = infstep)
     d = __descent_dir!(M)
     xpre = M.xpre
     αmax = constrain_step(xpre, d)
-    α = strong_backtracking!(optfn!, xpre, d, M.y, M.g, α = M.α, αmax = maxstep, β = 1e-4, σ = 0.1)
+    α = strong_backtracking!(optfn!, xpre, d, M.y, M.g, α=M.α, αmax=αmax, β=1e-4, σ=0.1)
     return α
 end
 

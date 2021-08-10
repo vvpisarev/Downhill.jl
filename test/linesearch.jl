@@ -27,9 +27,9 @@ function convex_quadratic(Q::AbstractMatrix, b::AbstractVector)
 end
 
 function random_convex_quadratic(dim::Int)
-    Q = rand(Float64, (dim, dim))
+    Q = rand(test_rng, Float64, (dim, dim))
     Q = Q * Q'  # QQᵀ is always positive semi-definite
-    b = rand(Float64, (dim, ))
+    b = rand(test_rng, Float64, (dim, ))
     fdf = convex_quadratic(Q, b)
     return fdf, Q, b
 end
@@ -64,7 +64,7 @@ end
     dim = 10
     fdf, Q, _ = random_convex_quadratic(dim)
     for i in 1:20
-        x0 = rand(Float64, (dim, ))
+        x0 = rand(test_rng, Float64, (dim, ))
         α, α₀ = convex_test(fdf, x0, Q)
         println(α, '\t', α₀)
         @test isapprox(α, α₀, rtol=0.05)
