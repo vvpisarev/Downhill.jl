@@ -1,5 +1,3 @@
-export LimitCalls, LimitIters, StopByGradient, ConstrainStepSize
-
 function base_method(::DescentMethod) end
 
 argumentvec(M::Wrapper) = argumentvec(base_method(M))
@@ -8,19 +6,28 @@ step_origin(M::Wrapper) = step_origin(base_method(M))
 
 __descent_dir!(M::Wrapper) = __descent_dir!(base_method(M))
 
-callfn!(M::Wrapper, fdf, x, α, d) = callfn!(base_method(M), fdf, x, α, d)
+@inline callfn!(M::Wrapper, fdf, x, α, d) = callfn!(base_method(M), fdf, x, α, d)
+
 
 function init!(M::Wrapper, args...; kw...)
     init!(base_method(M), args...; kw...)
     return
 end
 
+"""
+    reset!(M::DescentMethod, args...; kwargs...)
+
+Reset the solver parameters to the default (or to specific value - see the documentation for
+    the specific types).
+
+Each method has to implement a parameter-free `reset!(M)` method.
+"""
 function reset!(M::Wrapper, args...; kw...)
     reset!(base_method(M), args...; kw...)
     return
 end
 
-step!(M::Wrapper, args...; kw...) = step!(base_method(M), args...; kw...)
+step!(M::Wrapper, fn::F; kw...) where {F} = step!(base_method(M), fn; kw...)
 
 stopcond(M::Wrapper) = stopcond(base_method(M))
 @inline stopcond(M::CoreMethod) = false
@@ -38,18 +45,22 @@ call_count(M::CoreMethod) = -1
     convstat(M::Wrapper)
 
 For a converged state, return the statistics in the form of `NamedTuple`
-`(converged = true/false, argument, iterations, calls)`
+  `(converged = true/false, argument, iterations, calls)`. Negative values of `calls` or
+  `iterations` mean that the number has not been tracked.
 """
-convstat(M::Wrapper) = (converged = conv_success(M),
-                        argument = argumentvec(M),
-                        iterations = iter_count(M),
-                        calls = call_count(M)
-                       )
+function convstat(M::Wrapper)
+    return (
+        converged = conv_success(M),
+        argument = argumentvec(M),
+        iterations = iter_count(M),
+        calls = call_count(M)
+    )
+end
 
 """
     StopByGradient
 
-Wrapper type to stop optimization once the magnitude of gradient 
+Wrapper type to stop optimization once the magnitude of gradient
 is less than the specified value.
 """
 struct StopByGradient{T<:DescentMethod, F} <: Wrapper
@@ -72,7 +83,7 @@ end
 """
     LimitCalls
 
-Wrapper type to stop optimization once the number of 
+Wrapper type to stop optimization once the number of
 the objective function calls exceeds the specified value.
 """
 mutable struct LimitCalls{T<:DescentMethod}<:Wrapper
@@ -99,7 +110,7 @@ function reset!(M::LimitCalls, args...; call_limit, kw...)
     return
 end
 
-function callfn!(M::LimitCalls, fdf, x, α, d)
+function callfn!(M::LimitCalls, fdf::F, x, α, d) where {F}
     fg = callfn!(M.descent, fdf, x, α, d)
     M.call_count += 1
     return fg
@@ -111,7 +122,7 @@ call_count(M::LimitCalls) = M.call_count
 """
     LimitIters
 
-Wrapper type to stop optimization once the number of 
+Wrapper type to stop optimization once the number of
 the optimization iterations exceeds the specified value.
 """
 mutable struct LimitIters{T<:DescentMethod}<:Wrapper
@@ -131,17 +142,16 @@ function init!(M::LimitIters, args...; kw...)
     return
 end
 
-function reset!(M::LimitIters, args...; iter_limit = M.iter_limit, kw...)
+function reset!(M::LimitIters, args...; iter_limit=M.iter_limit, kw...)
     M.iter_count = 0
     M.iter_limit = iter_limit
     reset!(M.descent, args...; kw...)
     return
 end
 
-callfn!(M::LimitIters, fdf, x, α, d) = callfn!(M.descent, fdf, x, α, d)
 
-function step!(M::LimitIters, args...; kw...)
-    s = step!(M.descent, args...; kw...)
+function step!(M::LimitIters, fdf::F; kw...) where {F}
+    s = step!(M.descent, fdf; kw...)
     M.iter_count += 1
     return s
 end
@@ -153,7 +163,7 @@ stopcond(M::LimitIters) = M.iter_count < M.iter_limit ? stopcond(M.descent) : tr
 """
     ConstrainStepSize
 
-Wrapper type to limit step sizes attempted in optimization, 
+Wrapper type to limit step sizes attempted in optimization,
 given a function `(origin, direction) -> max_step`.
 """
 struct ConstrainStepSize{T<:DescentMethod, F} <: Wrapper
@@ -166,11 +176,9 @@ ConstrainStepSize(M::DescentMethod) = ConstrainStepSize(M, infstep)
 base_method(M::ConstrainStepSize) = M.descent
 
 function init!(M::ConstrainStepSize, args...; kw...)
-    init!(M.descent, args...; constrain_step = M.constraint, kw...)
+    init!(M.descent, args...; constrain_step=M.constraint, kw...)
     return
 end
-
-step!(M::ConstrainStepSize, optfn!) = step!(M.descent, optfn!, constrain_step = M.constraint)
 
 """
     TrackPath

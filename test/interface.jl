@@ -1,20 +1,17 @@
-using DescentMethods: argumentvec, gradientvec, step_origin
-
 @testset "Common interface functions" begin
-    init_vec = [1.0, 0]
-    steepest = SteepestDescent(init_vec)
-    hypergrad = HyperGradDescent(init_vec)
-    fixedrate = FixedRateDescent(init_vec)
-    conjgrad = CGDescent(init_vec)
-    bfgs = BFGS(init_vec)
-
-    descent_methods = (
-        steepest,
-        hypergrad,
-        fixedrate,
-        conjgrad,
-        bfgs,
+    init_vec = [1.0, 0.0]
+    types = (
+        SteepestDescent,
+        HyperGradDescent,
+        FixedRateDescent,
+        MomentumDescent,
+        NesterovMomentum,
+        CGDescent,
+        BFGS,
+        CholBFGS,
     )
+
+    descent_methods = map(T -> T(init_vec), types)
 
     interface = (
         argumentvec,

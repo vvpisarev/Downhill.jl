@@ -2,6 +2,12 @@ module DescentMethods
 
 using LinearAlgebra
 
+export FixedRateDescent, MomentumDescent, NesterovMomentum
+export SteepestDescent, HyperGradDescent, CGDescent
+export BFGS, CholBFGS
+
+export optimize!
+
 include("utils.jl")
 include("abstract_types.jl")
 include("wrappers.jl")
