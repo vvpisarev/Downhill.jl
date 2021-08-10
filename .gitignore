@@ -4,3 +4,5 @@
 ~*
 *.vscode
 *.mem
+docs/build
+Manifest.toml
