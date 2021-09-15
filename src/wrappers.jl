@@ -180,6 +180,8 @@ function init!(M::ConstrainStepSize, args...; kw...)
     return
 end
 
+step!(M::ConstrainStepSize, optfn!) = step!(M.descent, optfn!, constrain_step=M.constraint)
+
 """
     TrackPath
 
