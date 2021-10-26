@@ -45,13 +45,14 @@ call_count(M::CoreMethod) = -1
     convstat(M::Wrapper)
 
 For a converged state, return the statistics in the form of `NamedTuple`
-  `(converged = true/false, argument, iterations, calls)`. Negative values of `calls` or
-  `iterations` mean that the number has not been tracked.
+  `(converged = true/false, argument, gradient, iterations, calls)`.
+  Negative values of `calls` or `iterations` mean that the number has not been tracked.
 """
 function convstat(M::Wrapper)
     return (
         converged = conv_success(M),
         argument = argumentvec(M),
+        gradient = gradientvec(M),
         iterations = iter_count(M),
         calls = call_count(M)
     )
@@ -183,18 +184,46 @@ end
 step!(M::ConstrainStepSize, optfn!) = step!(M.descent, optfn!, constrain_step=M.constraint)
 
 """
-    TrackPath
+    Logger
 
 Wrapper type to dump the steps during the optimization.
+The first dumped value is argument, the second is function value, the third is gradient.
 """
-struct TrackPath{T<:DescentMethod,F<:IO} <: Wrapper
+struct Logger{T<:DescentMethod,F<:IO} <: Wrapper
     descent::T
     file::F
 end
 
-base_method(M::TrackPath) = M.descent
+"""
+    Logger(M::DescentMethod, name, args...; kw...)
 
-function callfn!(M::TrackPath, fdf, x, α, d)
+Logger constructor from file name. `args` and `kw` are the same as for `open()` function.
+"""
+function Logger(M::DescentMethod, name::AbstractString, args...; kw...)
+    Logger(M, open(name, args...; kw...))
+end
+
+base_method(M::Logger) = M.descent
+
+function init!(M::Logger, args...; kw...)
+    arg = argumentvec(M)
+    n = length(arg)
+    print(
+        M.file,
+        """
+        # Optimization start
+        # First $n value$(n == 1 ? "" : "s") - argument vector
+        # next value - function value
+        # last $n value$(n == 1 ? "" : "s") - gradient vector
+
+        # Solver initialization:
+        """
+    )
+    init!(M.descent, args...; kw...)
+    return
+end
+
+function callfn!(M::Logger, fdf, x, α, d)
     print(M.file, join(x .+ α .* d, ' '))
     fg = callfn!(M.descent, fdf, x, α, d)
     y, g = fg
@@ -202,7 +231,35 @@ function callfn!(M::TrackPath, fdf, x, α, d)
     return fg
 end
 
-function step!(M::TrackPath, args...; kw...)
-    println(M.file)
+function step!(M::Logger, args...; kw...)
+    niter = iter_count(M.descent) + 1
+    println(M.file, "\n# Iteration $niter")
     step!(M.descent, args...; kw...)
+end
+
+function convstat(M::Logger)
+    converged = conv_success(M)
+    gradient = gradientvec(M)
+    argument = argumentvec(M)
+    iterations = iter_count(M)
+    calls = call_count(M)
+    print(
+        M.file,
+        """
+
+        # Final statistics:
+        # converged: $(converged)
+        # final gradient: $(gradient)
+        # final argument: $(argument)
+        # number of iterations: $(iterations)
+        # number of function calls: $(calls)
+        """
+    )
+    return (
+        converged = converged,
+        argument = argument,
+        gradient = gradient,
+        iterations = iterations,
+        calls = calls
+    )
 end
