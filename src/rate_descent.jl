@@ -94,7 +94,7 @@ end
 
 function MomentumDescent(
     x::AbstractVector;
-    learn_rate::Real = 0.01, decay_rate::Real = 0.01
+    learn_rate::Real = 0.01, decay_rate::Real = 0.9
 )
     F = float(eltype(x))
     return MomentumDescent(
@@ -148,8 +148,10 @@ function step!(M::MomentumDescent, optfn!; constrain_step = infstep)
         M.decay_rate * v - M.learn_rate * g
     end
     maxstep = constrain_step(M.x, M.v)
-    s = maxstep > 1 ? one(maxstep) : maxstep / 2
-    optfn!(M.x, s, M.v)
+    if maxstep <= 1
+        M.v *= maxstep / 2
+    end
+    optfn!(M.x, one(maxstep), M.v)
     return M.learn_rate
 end
 
@@ -184,22 +186,27 @@ mutable struct NesterovMomentum{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMe
     x::V
     g::V
     v::V
-    learn_rate::T
-    decay_rate::T
+    α::T # learning rate
+    β::T # decay rate
 end
 
 @inline gradientvec(M::NesterovMomentum) = M.g
 @inline argumentvec(M::NesterovMomentum) = M.x
 @inline step_origin(M::NesterovMomentum) = M.x
 
-function NesterovMomentum(x::AbstractVector; learn_rate::Real=0.01, decay_rate::Real=0.01)
+function NesterovMomentum(x::AbstractVector; learn_rate::Real=0.01, decay_rate::Real=0.9)
     F = float(eltype(x))
+
+    # α and β are parameters of "half step" v <- βv - α∇f
+    # applied twice, it must yield v <- decay_rate × v - learn_rate × ∇f
+    α = learn_rate
+    β = decay_rate
     return NesterovMomentum(
         similar(x, F),
         similar(x, F),
         similar(x, F),
-        convert(F, learn_rate),
-        convert(F, decay_rate),
+        convert(F, α),
+        convert(F, β),
     )
 end
 
@@ -221,8 +228,8 @@ function reset!(M::NesterovMomentum, x0, learn_rate=M.learn_rate, decay_rate=M.d
             resize!(v, n)
         end
     end
-    M.learn_rate = learn_rate
-    M.decay_rate = decay_rate
+    M.α = learn_rate / (1 + decay_rate)
+    M.β = sqrt(decay_rate)
     return M
 end
 
@@ -234,17 +241,16 @@ end
 end
 
 function step!(M::NesterovMomentum, optfn!; constrain_step = infstep)
+    α, β = M.α, M.β
+    M.v *= β
     maxstep = constrain_step(M.x, M.v)
-    s = maxstep > M.decay_rate ? M.decay_rate : maxstep / 2
-    optfn!(M.x, s, M.v)
-    map!(M.v, M.v, M.g) do v, g
-        M.decay_rate * v - M.learn_rate * g
+    if maxstep <= 1
+        M.v *= maxstep / 2
     end
-    d = rmul!(M.g, -1)
-    maxstep = constrain_step(M.x, d)
-    s = maxstep > M.learn_rate ? M.learn_rate : maxstep / 2
-    optfn!(M.x, s, d)
-    return M.learn_rate
+    optfn!(M.x, one(maxstep), M.v)
+    M.v .-= α * M.g
+    M.x .-= α * M.g
+    return M.α
 end
 
 @inline function __update_arg!(M::NesterovMomentum, x, α, d)

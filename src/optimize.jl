@@ -32,7 +32,7 @@ the step sizes.
 """
 function optimize!(
     M::CoreMethod, fdf, x0;
-    gtol = convert(eltype(x0), 1e-6),
+    gtol = convert(float(eltype(x0)), 1e-6),
     maxiter = 100,
     maxcalls = nothing,
     reset = true,
