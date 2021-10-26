@@ -1,17 +1,7 @@
 @testset "Common interface functions" begin
     init_vec = [1.0, 0.0]
-    types = (
-        SteepestDescent,
-        HyperGradDescent,
-        FixedRateDescent,
-        MomentumDescent,
-        NesterovMomentum,
-        CGDescent,
-        BFGS,
-        CholBFGS,
-    )
 
-    descent_methods = map(T -> T(init_vec), types)
+    descent_methods = map(T -> T(init_vec), OPT_TYPES)
 
     interface = (
         argumentvec,
