@@ -3,11 +3,28 @@ using Test
 using DescentMethods
 using DescentMethods: argumentvec, gradientvec, step_origin, mcholesky!
 
-using  LinearAlgebra
+using LinearAlgebra
 
 using Random
 
 const test_rng = MersenneTwister(123581321)
+
+"""
+    rosenbrock!(x, g; b=2)
+
+Return the value of Rosenbrock function in `length(x)` dimensions.
+"""
+function rosenbrock!(x::AbstractVector, g::AbstractVector; b=2)
+    f = zero(eltype(g))
+    fill!(g, 0)
+    inds = eachindex(x, g)
+    for i in 2:last(inds)
+        f += (1 - x[i-1])^2 + b * (x[i] - x[i-1]^2)^2
+        g[i-1] += 2 * (x[i-1] - 1) + 4 * b * x[i-1] * (x[i-1]^2 - x[i])
+        g[i] += 2 * b * (x[i] - x[i-1]^2)
+    end
+    return f, g
+end
 
 OPT_TYPES = (
     SteepestDescent,

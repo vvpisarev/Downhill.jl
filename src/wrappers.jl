@@ -49,12 +49,26 @@ For a converged state, return the statistics in the form of `NamedTuple`
   Negative values of `calls` or `iterations` mean that the number has not been tracked.
 """
 function convstat(M::Wrapper)
-    return (
-        converged = conv_success(M),
-        argument = argumentvec(M),
-        gradient = gradientvec(M),
-        iterations = iter_count(M),
-        calls = call_count(M)
+    converged = conv_success(M)
+    argument = argumentvec(M)
+    gradient = gradientvec(M)
+    iterations = iter_count(M)
+    calls = call_count(M)
+    @logmsg OptLogLevel """
+
+    ==FINAL STATISTICS==
+    # converged: $(converged)
+    # final gradient: $(gradient)
+    # final argument: $(argument)
+    # number of iterations: $(iterations)
+    # number of function calls: $(calls)
+    """
+    return (;
+        converged,
+        argument,
+        gradient,
+        iterations,
+        calls,
     )
 end
 
@@ -183,83 +197,13 @@ end
 
 step!(M::ConstrainStepSize, optfn!) = step!(M.descent, optfn!, constrain_step=M.constraint)
 
-"""
-    Logger
-
-Wrapper type to dump the steps during the optimization.
-The first dumped value is argument, the second is function value, the third is gradient.
-"""
-struct Logger{T<:DescentMethod,F<:IO} <: Wrapper
-    descent::T
-    file::F
+struct OptFunc{M<:DescentMethod,F<:Base.Callable}<:Function
+    method::M
+    fdf::F
 end
 
-"""
-    Logger(M::DescentMethod, name, args...; kw...)
-
-Logger constructor from file name. `args` and `kw` are the same as for `open()` function.
-"""
-function Logger(M::DescentMethod, name::AbstractString, args...; kw...)
-    Logger(M, open(name, args...; kw...))
-end
-
-base_method(M::Logger) = M.descent
-
-function init!(M::Logger, args...; kw...)
-    arg = argumentvec(M)
-    n = length(arg)
-    print(
-        M.file,
-        """
-        # Optimization start
-        # First $n value$(n == 1 ? "" : "s") - argument vector
-        # next value - function value
-        # last $n value$(n == 1 ? "" : "s") - gradient vector
-
-        # Solver initialization:
-        """
-    )
-    init!(M.descent, args...; kw...)
-    return
-end
-
-function callfn!(M::Logger, fdf, x, α, d)
-    print(M.file, join(x .+ α .* d, ' '))
-    fg = callfn!(M.descent, fdf, x, α, d)
-    y, g = fg
-    println(M.file, ' ', y, ' ', join(g, ' '))
-    return fg
-end
-
-function step!(M::Logger, args...; kw...)
-    niter = iter_count(M.descent) + 1
-    println(M.file, "\n# Iteration $niter")
-    step!(M.descent, args...; kw...)
-end
-
-function convstat(M::Logger)
-    converged = conv_success(M)
-    gradient = gradientvec(M)
-    argument = argumentvec(M)
-    iterations = iter_count(M)
-    calls = call_count(M)
-    print(
-        M.file,
-        """
-
-        # Final statistics:
-        # converged: $(converged)
-        # final gradient: $(gradient)
-        # final argument: $(argument)
-        # number of iterations: $(iterations)
-        # number of function calls: $(calls)
-        """
-    )
-    return (
-        converged = converged,
-        argument = argument,
-        gradient = gradient,
-        iterations = iterations,
-        calls = calls
-    )
+function (optfn::OptFunc)(x, α, d)
+    y, g = callfn!(optfn.method, optfn.fdf, x, α, d)
+    @logmsg OptLogLevel "$(join(x .+ α .* d, ' ')) $y $(join(g, ' '))"
+    y, g
 end

@@ -28,6 +28,14 @@ function strong_backtracking!(
     β = convert(T, 1e-4),
     σ = convert(T, 0.5)
 ) where {F,T}
+    @logmsg LSLogLevel """
+
+    ==LINE SEARCH START==
+    x0 = $(repr(x0))
+     d = $(repr(d))
+    y0 = $(repr(y0))
+    g0 = $(repr(grad0))
+    """
     α = min(α, αmax / 2)
     α_prev = zero(α)
     y_prev = y0
@@ -53,23 +61,29 @@ function strong_backtracking!(
     min_factor = 17/16 # min. factor to expand bracketing interval
 
     nbracket_max = 200
+    @logmsg LSLogLevel "==BRACKETING THE MINIMUM=="
     for nbracket in 1:nbracket_max
         y, grad = fdf(x0, α, d)
         g = dot(grad, d)
         Δyp = (g + g0) * α / 2 # parabolic approximation
         if abs(Δyp) < ϵ
+            @warn "Function change is too small, using parabolic approximation" Δyp Δy=y-y0
             Δy = Δyp
         else
             Δy = y - y0
+            @logmsg LSLogLevel "Δy = $(Δy)"
         end
         if Δy > α * wolfe1 || y >= y_prev + ϵ # x >= NaN is always false
             αlo, αhi, ylo, yhi, glo, ghi = α_prev, α, y_prev, y, g_prev, g
+            @logmsg LSLogLevel "==BRACKETING SUCCESS: FUNCTION CHANGE==" y Δy α * wolfe1 y_prev + ϵ
             break
-        end
-        if abs(g) <= wolfe2
+        elseif abs(g) <= wolfe2
+            @logmsg LSLogLevel "==BRACKETING SUCCESS=="
+            @logmsg LSLogLevel "==LINEAR SEARCH SUCCESS==" α
             return α
         elseif g >= 0
             αlo, αhi, ylo, yhi, glo, ghi = α_prev, α, y_prev, y, g_prev, g
+            @logmsg LSLogLevel "==BRACKETING SUCCESS=="
             break
         end
 
@@ -79,6 +93,8 @@ function strong_backtracking!(
 
         # return 0 signaling that bracketing failed
         if iszero(Δα)
+            @warn "==BRACKETING FAIL, LAST STEP VALUE RETURNED==" α
+            @logmsg LSLogLevel "==LINEAR SEARCH INTERRUPTED=="
             return Δα
         end
         d1 = g_prev + g - 3 * (y - y_prev) / Δα
@@ -100,11 +116,13 @@ function strong_backtracking!(
     # zoom phase
     # αlo is lower bound, αhi is higher
     small_α = sqrt(eps(one(αlo)))
+    @logmsg LSLogLevel "==ZOOM PHASE==" αlo αhi
     for nzoom in 1:200
         # cubic interpolation (Nocedal & Wright 2nd ed., p.59)
         Δα = αhi - αlo
         if Δα < eps(αhi) * 32
-            @warn "Step too small; returning"
+            @warn "Step too small; interrupting line search" Δα αhi
+            @logmsg LSLogLevel "==LINEAR SEARCH INTERRUPTED=="
             return αlo + Δα / 2
         end
         d1 = ghi + glo - 3 * (yhi - ylo) / Δα
@@ -130,13 +148,17 @@ function strong_backtracking!(
         if Δy > α * wolfe1 || y >= ylo + ϵ
             αhi, yhi, ghi = α, y, g
         else
-            abs(g) <= wolfe2 && return α
-            if g > 0
+            if abs(g) <= wolfe2
+                @logmsg LSLogLevel "==ZOOM PHASE SUCCESS=="
+                @logmsg LSLogLevel "==LINEAR SEARCH SUCCESS==" α
+                return α
+            elseif g > 0
                 αhi, yhi, ghi = α, y, g
             else
                 αlo, ylo, glo = α, y, g
             end
         end
+        @logmsg LSLogLevel "Zoom iteration $(nzoom)" αlo αhi α
     end
 end
 

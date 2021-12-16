@@ -69,3 +69,23 @@ function mcholesky!(A::AbstractMatrix{T}; δ = convert(T, 1e-3)) where T
     end
     return Cholesky(A, 'U', 0)
 end
+
+
+#####LOGGING#####
+
+function metafmt_noprefix_nosuffix(level::LogLevel, _module, group, id, file, line)
+    @nospecialize
+    if level < Info
+        color = default_logcolor(level)
+        prefix = string(
+            level == OptLogLevel ? "Optimizer" :
+            level == LSLogLevel ? "Linesearch" :
+            string(level),
+            ':'
+        )
+        suffix::String = ""
+        return color, prefix, suffix
+    else
+        return default_metafmt(level, _module, group, id, file, line)
+    end
+end
