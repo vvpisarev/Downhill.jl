@@ -1,6 +1,9 @@
 module DescentMethods
 
 using LinearAlgebra
+using Printf: Format, format
+using Logging
+using Logging: Info, default_logcolor, default_metafmt
 
 export FixedRateDescent, MomentumDescent, NesterovMomentum
 export SteepestDescent, HyperGradDescent, CGDescent

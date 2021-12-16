@@ -32,6 +32,7 @@ HyperGradDescent(x::AbstractVector{T}) where {T} = HyperGradDescent(x, 0, 1e-4)
 function init!(M::HyperGradDescent{T}, optfn!, x0; reset, kw...) where {T}
     reset != false && reset!(M, x0)
     optfn!(x0, zero(T), x0)
+    fill!(M.gpre, false)
     return M
 end
 
@@ -60,7 +61,7 @@ end
 
 function step!(M::HyperGradDescent, optfn!; constrain_step = infstep)
     M.gpre, M.g = M.g, M.gpre
-    M.α += M.μ * dot(M.g, M.gpre)
+    M.α += abs(M.μ * dot(M.g, M.gpre))
     d = rmul!(M.gpre, -1)
     maxstep = constrain_step(M.x, d)
     s = maxstep > M.α ? M.α : maxstep / 2
