@@ -1,4 +1,4 @@
-function base_method(::DescentMethod) end
+function base_method(::AbstractOptBuffer) end
 
 argumentvec(M::Wrapper) = argumentvec(base_method(M))
 gradientvec(M::Wrapper) = gradientvec(base_method(M))
@@ -8,17 +8,16 @@ __descent_dir!(M::Wrapper) = __descent_dir!(base_method(M))
 
 @inline callfn!(M::Wrapper, fdf, x, α, d) = callfn!(base_method(M), fdf, x, α, d)
 
-
 function init!(M::Wrapper, args...; kw...)
     init!(base_method(M), args...; kw...)
     return
 end
 
 """
-    reset!(M::DescentMethod, args...; kwargs...)
+    reset!(M::AbstractOptBuffer, args...; kwargs...)
 
-Reset the solver parameters to the default (or to specific value - see the documentation for
-    the specific types).
+Reset the solver parameters to the default (or to specific value -- see the documentation
+    for the specific types).
 
 Each method has to implement a parameter-free `reset!(M)` method.
 """
@@ -30,16 +29,16 @@ end
 step!(M::Wrapper, fn::F; kw...) where {F} = step!(base_method(M), fn; kw...)
 
 stopcond(M::Wrapper) = stopcond(base_method(M))
-@inline stopcond(M::CoreMethod) = false
+@inline stopcond(M::OptBuffer) = false
 
 conv_success(M::Wrapper) = conv_success(base_method(M))
-@inline conv_success(M::CoreMethod) = false
+@inline conv_success(M::OptBuffer) = false
 
 iter_count(M::Wrapper) = iter_count(base_method(M))
 call_count(M::Wrapper) = call_count(base_method(M))
 
-iter_count(M::CoreMethod) = -1
-call_count(M::CoreMethod) = -1
+iter_count(M::OptBuffer) = -1
+call_count(M::OptBuffer) = -1
 
 """
     convstat(M::Wrapper)
@@ -78,7 +77,7 @@ end
 Wrapper type to stop optimization once the magnitude of gradient
 is less than the specified value.
 """
-struct StopByGradient{T<:DescentMethod, F} <: Wrapper
+struct StopByGradient{T<:AbstractOptBuffer, F} <: Wrapper
     descent::T
     gtol::F
 end
@@ -101,14 +100,14 @@ end
 Wrapper type to stop optimization once the number of
 the objective function calls exceeds the specified value.
 """
-mutable struct LimitCalls{T<:DescentMethod}<:Wrapper
+mutable struct LimitCalls{T<:AbstractOptBuffer}<:Wrapper
     descent::T
     call_limit::Int
     call_count::Int
 end
 
-LimitCalls(M::DescentMethod) = LimitCalls(M, typemax(Int), 0)
-LimitCalls(M::DescentMethod, maxcalls::Integer) = LimitCalls(M, maxcalls, 0)
+LimitCalls(M::AbstractOptBuffer) = LimitCalls(M, typemax(Int), 0)
+LimitCalls(M::AbstractOptBuffer, maxcalls::Integer) = LimitCalls(M, maxcalls, 0)
 
 base_method(M::LimitCalls) = M.descent
 
@@ -140,14 +139,14 @@ call_count(M::LimitCalls) = M.call_count
 Wrapper type to stop optimization once the number of
 the optimization iterations exceeds the specified value.
 """
-mutable struct LimitIters{T<:DescentMethod}<:Wrapper
+mutable struct LimitIters{T<:AbstractOptBuffer}<:Wrapper
     descent::T
     iter_limit::Int
     iter_count::Int
 end
 
-LimitIters(M::DescentMethod) = LimitIters(M, typemax(Int), 0)
-LimitIters(M::DescentMethod, maxiters::Integer) = LimitIters(M, maxiters, 0)
+LimitIters(M::AbstractOptBuffer) = LimitIters(M, typemax(Int), 0)
+LimitIters(M::AbstractOptBuffer, maxiters::Integer) = LimitIters(M, maxiters, 0)
 
 base_method(M::LimitIters) = M.descent
 
@@ -181,12 +180,12 @@ stopcond(M::LimitIters) = M.iter_count < M.iter_limit ? stopcond(M.descent) : tr
 Wrapper type to limit step sizes attempted in optimization,
 given a function `(origin, direction) -> max_step`.
 """
-struct ConstrainStepSize{T<:DescentMethod, F} <: Wrapper
+struct ConstrainStepSize{T<:AbstractOptBuffer, F} <: Wrapper
     descent::T
     constraint::F
 end
 
-ConstrainStepSize(M::DescentMethod) = ConstrainStepSize(M, infstep)
+ConstrainStepSize(M::AbstractOptBuffer) = ConstrainStepSize(M, infstep)
 
 base_method(M::ConstrainStepSize) = M.descent
 
@@ -197,7 +196,7 @@ end
 
 step!(M::ConstrainStepSize, optfn!) = step!(M.descent, optfn!, constrain_step=M.constraint)
 
-struct OptFunc{M<:DescentMethod,F<:Base.Callable}<:Function
+struct OptFunc{M<:AbstractOptBuffer,F<:Base.Callable}<:Function
     method::M
     fdf::F
 end

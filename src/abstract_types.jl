@@ -1,10 +1,10 @@
-export DescentMethod, CoreMethod, Wrapper
+export AbstractOptBuffer, OptBuffer, Wrapper
 
-abstract type DescentMethod end
+abstract type AbstractOptBuffer end
 
-abstract type CoreMethod <: DescentMethod end
+abstract type OptBuffer <: AbstractOptBuffer end
 
-abstract type Wrapper <: DescentMethod end
+abstract type Wrapper <: AbstractOptBuffer end
 
 const OptLogLevel = LogLevel(-10)
 const LSLogLevel = LogLevel(-20)

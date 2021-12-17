@@ -4,7 +4,7 @@
 Descent method which minimizes the objective function in the direction
 of antigradient at each step.
 """
-mutable struct FixedRateDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
+mutable struct FixedRateDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     x::V
     g::V
     α::T
@@ -80,7 +80,7 @@ end
 Descent method which minimizes the objective function in the direction
 of antigradient at each step.
 """
-mutable struct MomentumDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
+mutable struct MomentumDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     x::V
     g::V
     v::V
@@ -182,7 +182,7 @@ end
 Descent method which minimizes the objective function in the direction
 of antigradient at each step.
 """
-mutable struct NesterovMomentum{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
+mutable struct NesterovMomentum{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     x::V
     g::V
     v::V

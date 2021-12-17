@@ -5,7 +5,7 @@ Quasi-Newton descent method.
 """
 mutable struct BFGS{T<:AbstractFloat,
                     V<:AbstractVector{T},
-                    M<:AbstractMatrix{T}} <: CoreMethod
+                    M<:AbstractMatrix{T}} <: OptBuffer
     invH::M
     x::V
     g::V

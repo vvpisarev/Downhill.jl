@@ -52,7 +52,7 @@ function convex_test(fdf, x0, Q, d=nothing)
         d = - 0.01 * grad0  # for greater values of d ⟹ α ≉ α₀
     end
 
-    α = DescentMethods.strong_backtracking!(fdf, x0, d, y0, grad0)
+    α = Downhill.strong_backtracking!(fdf, x0, d, y0, grad0)
 
     "Exact minimizer of convex quadratic function. See Nocedal p. 56, eq. 3.55."
     α₀ = - (grad0' * d) / (d' * Q * d)

@@ -4,7 +4,7 @@
 Descent method which minimizes the objective function in the direction
 of antigradient at each step.
 """
-mutable struct HyperGradDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
+mutable struct HyperGradDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     x::V
     g::V
     gpre::V

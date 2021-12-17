@@ -1,7 +1,6 @@
-module DescentMethods
+module Downhill
 
 using LinearAlgebra
-using Printf: Format, format
 using Logging
 using Logging: Info, default_logcolor, default_metafmt
 

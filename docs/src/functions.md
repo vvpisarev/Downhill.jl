@@ -1,7 +1,7 @@
 # Basic Functions
 
 ```@meta
-CurrentModule = DescentMethods
+CurrentModule = Downhill
 ```
 
 ```@docs

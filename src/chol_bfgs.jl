@@ -4,7 +4,7 @@ Quasi-Newton descent method.
 """
 mutable struct CholBFGS{T<:AbstractFloat,
                         V<:AbstractVector{T},
-                        C<:Cholesky{T}} <: CoreMethod
+                        C<:Cholesky{T}} <: OptBuffer
     hess::C
     x::V
     g::V

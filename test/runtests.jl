@@ -1,7 +1,7 @@
 using Test
 
-using DescentMethods
-using DescentMethods: argumentvec, gradientvec, step_origin, mcholesky!
+using Downhill
+using Downhill: argumentvec, gradientvec, step_origin, mcholesky!
 
 using LinearAlgebra
 

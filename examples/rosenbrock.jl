@@ -1,4 +1,4 @@
-using DescentMethods
+using Downhill
 
 """
     rosenbrock(x; b=2)

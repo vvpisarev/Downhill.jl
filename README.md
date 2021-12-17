@@ -1,4 +1,4 @@
-# DescentMethods.jl
+# Downhill.jl
 
 A collection of descent-based optimization methods.
 

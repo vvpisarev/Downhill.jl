@@ -64,7 +64,7 @@ end
 
 """
     optimize!(
-        M::CoreMethod, fdf, x0;
+        M::OptBuffer, fdf, x0;
         gtol=1e-6,
         maxiter=100,
         maxcalls=nothing,
@@ -77,7 +77,7 @@ end
 Find an optimizer for `fdf`, starting with the initial approximation `x0`.
 
 # Arguments:
-- `M::CoreMethod`: the core method to use for optimization
+- `M::OptBuffer`: the core method to use for optimization
 - `fdf(x, g)::Function`: function to optimize. It must return a tuple (f(x), ∇f(x)) and,
     if `g` is mutable, overwrite
     it with the gradient.
@@ -99,7 +99,7 @@ Find an optimizer for `fdf`, starting with the initial approximation `x0`.
     statistics regarding the line search.
 """
 function optimize!(
-    M::CoreMethod, fdf, x0;
+    M::OptBuffer, fdf, x0;
     gtol = convert(float(eltype(x0)), 1e-6),
     maxiter = 100,
     maxcalls = nothing,
@@ -129,7 +129,7 @@ end
 
 """
     DescentMethods.solver(
-        M::CoreMethod;
+        M::OptBuffer;
         gtol = 1e-6,
         maxiter = 100,
         maxcalls = nothing,
@@ -140,7 +140,7 @@ Return the wrapper object for a chosen method to solve an optimization problem w
     parameters. For the description of keywords, see [`optimize!`](@ref)
 """
 function solver(
-    M::CoreMethod;
+    M::OptBuffer;
     gtol=convert(eltype(argumentvec(M)), 1e-6),
     maxiter=100,
     maxcalls=nothing,
@@ -173,6 +173,6 @@ end
 Return the wrapper object for a chosen method to solve an optimization problem with given
     parameters compatible with the dimensions of `x`.
 """
-function solver(M::Type{<:CoreMethod}, x::AbstractVector; kw...)
+function solver(M::Type{<:OptBuffer}, x::AbstractVector; kw...)
     return solver(M(x); kw...)
 end

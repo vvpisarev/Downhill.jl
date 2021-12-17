@@ -22,7 +22,7 @@ end
 
     @testset "Solvers" begin
         @testset "$(typeof(descent).name)" for descent in descent_methods
-            opt = DescentMethods.solver(
+            opt = Downhill.solver(
                 descent;
                 gtol=1e-3,
                 maxiter=100,
