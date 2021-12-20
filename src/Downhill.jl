@@ -8,7 +8,7 @@ export FixedRateDescent, MomentumDescent, NesterovMomentum
 export SteepestDescent, HyperGradDescent, CGDescent
 export BFGS, CholBFGS
 
-export optimize!
+export optimize!, optimize
 
 include("utils.jl")
 include("abstract_types.jl")

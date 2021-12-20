@@ -28,7 +28,7 @@ end
                 maxiter=100,
                 maxcalls=1000,
             )
-            @test optimize!(opt, rosenbrock!, init_vec) isa NamedTuple
+            @test optimize!(rosenbrock!, opt, init_vec) isa NamedTuple
         end
     end
 end

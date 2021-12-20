@@ -6,4 +6,4 @@
 *.mem
 *.cov
 docs/build
-Manifest.toml
+Manifest*.toml

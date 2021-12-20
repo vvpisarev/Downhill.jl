@@ -27,7 +27,7 @@ julia> function rosenbrock!(x::AbstractVector, g::AbstractVector; b=100)
 
 julia> let x0 = zeros(2)
            opt = BFGS(x0)
-           optresult = optimize!(opt, rosenbrock!, x0)
+           optresult = optimize!(rosenbrock!, opt, x0)
            optresult.argument
        end
 2-element Vector{Float64}:

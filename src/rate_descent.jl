@@ -21,7 +21,7 @@ end
 
 FixedRateDescent(x::AbstractVector) = FixedRateDescent(x, 0.01)
 
-function init!(M::FixedRateDescent{T}, optfn!, x0; kw...) where {T}
+function init!(optfn!, M::FixedRateDescent{T}, x0; kw...) where {T}
     optfn!(x0, zero(T), x0)
     return
 end
@@ -38,14 +38,14 @@ function reset!(M::FixedRateDescent, x0, α = M.α)
     return
 end
 
-@inline function callfn!(M::FixedRateDescent, fdf, x, α, d)
+@inline function callfn!(fdf, M::FixedRateDescent, x, α, d)
     __update_arg!(M, x, α, d)
     y, g = fdf(M.x, M.g)
     __update_grad!(M, g)
     return y, g
 end
 
-function step!(M::FixedRateDescent, optfn!; constrain_step = infstep)
+function step!(optfn!, M::FixedRateDescent; constrain_step = infstep)
     d = rmul!(M.g, -1)
     maxstep = constrain_step(M.x, d)
     s = M.α <= maxstep ? M.α : maxstep / 2
@@ -106,7 +106,7 @@ function MomentumDescent(
     )
 end
 
-function init!(M::MomentumDescent{T}, optfn!, x0; kw...) where {T}
+function init!(optfn!, M::MomentumDescent{T}, x0; kw...) where {T}
     optfn!(x0, zero(T), x0)
     fill!(M.v, zero(T))
     return M
@@ -136,14 +136,14 @@ function reset!(
     return M
 end
 
-@inline function callfn!(M::MomentumDescent, fdf, x, α, d)
+@inline function callfn!(fdf, M::MomentumDescent, x, α, d)
     __update_arg!(M, x, α, d)
     y, g = fdf(M.x, M.g)
     __update_grad!(M, g)
     return y, g
 end
 
-function step!(M::MomentumDescent, optfn!; constrain_step = infstep)
+function step!(optfn!, M::MomentumDescent; constrain_step = infstep)
     map!(M.v, M.v, M.g) do v, g
         M.decay_rate * v - M.learn_rate * g
     end
@@ -210,7 +210,7 @@ function NesterovMomentum(x::AbstractVector; learn_rate::Real=0.01, decay_rate::
     )
 end
 
-function init!(M::NesterovMomentum{T}, optfn!, x0; kw...) where {T}
+function init!(optfn!, M::NesterovMomentum{T}, x0; kw...) where {T}
     optfn!(x0, zero(T), x0)
     fill!(M.v, zero(T))
     return M
@@ -233,14 +233,14 @@ function reset!(M::NesterovMomentum, x0, learn_rate=M.learn_rate, decay_rate=M.d
     return M
 end
 
-@inline function callfn!(M::NesterovMomentum, fdf, x, α, d)
+@inline function callfn!(fdf, M::NesterovMomentum, x, α, d)
     __update_arg!(M, x, α, d)
     y, g = fdf(M.x, M.g)
     __update_grad!(M, g)
     return y, g
 end
 
-function step!(M::NesterovMomentum, optfn!; constrain_step = infstep)
+function step!(optfn!, M::NesterovMomentum; constrain_step = infstep)
     α, β = M.α, M.β
     M.v *= β
     maxstep = constrain_step(M.x, M.v)

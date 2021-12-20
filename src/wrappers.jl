@@ -6,10 +6,10 @@ step_origin(M::Wrapper) = step_origin(base_method(M))
 
 __descent_dir!(M::Wrapper) = __descent_dir!(base_method(M))
 
-@inline callfn!(M::Wrapper, fdf, x, α, d) = callfn!(base_method(M), fdf, x, α, d)
+@inline callfn!(fdf, M::Wrapper, x, α, d) = callfn!(fdf, base_method(M), x, α, d)
 
-function init!(M::Wrapper, args...; kw...)
-    init!(base_method(M), args...; kw...)
+function init!(fdf, M::Wrapper, args...; kw...)
+    init!(fdf, base_method(M), args...; kw...)
     return
 end
 
@@ -26,7 +26,7 @@ function reset!(M::Wrapper, args...; kw...)
     return
 end
 
-step!(M::Wrapper, fn::F; kw...) where {F} = step!(base_method(M), fn; kw...)
+step!(fn::F, M::Wrapper; kw...) where {F} = step!(fn, base_method(M); kw...)
 
 stopcond(M::Wrapper) = stopcond(base_method(M))
 @inline stopcond(M::OptBuffer) = false
@@ -111,9 +111,9 @@ LimitCalls(M::AbstractOptBuffer, maxcalls::Integer) = LimitCalls(M, maxcalls, 0)
 
 base_method(M::LimitCalls) = M.descent
 
-function init!(M::LimitCalls, args...; kw...)
+function init!(fdf, M::LimitCalls, args...; kw...)
     M.call_count = 0
-    init!(M.descent, args...; kw...)
+    init!(fdf, M.descent, args...; kw...)
     return
 end
 
@@ -124,8 +124,8 @@ function reset!(M::LimitCalls, args...; call_limit, kw...)
     return
 end
 
-function callfn!(M::LimitCalls, fdf::F, x, α, d) where {F}
-    fg = callfn!(M.descent, fdf, x, α, d)
+function callfn!(fdf::F, M::LimitCalls, x, α, d) where {F}
+    fg = callfn!(fdf, M.descent, x, α, d)
     M.call_count += 1
     return fg
 end
@@ -150,9 +150,9 @@ LimitIters(M::AbstractOptBuffer, maxiters::Integer) = LimitIters(M, maxiters, 0)
 
 base_method(M::LimitIters) = M.descent
 
-function init!(M::LimitIters, args...; kw...)
+function init!(fdf, M::LimitIters, args...; kw...)
     M.iter_count = 0
-    init!(M.descent, args...; kw...)
+    init!(fdf, M.descent, args...; kw...)
     return
 end
 
@@ -164,8 +164,8 @@ function reset!(M::LimitIters, args...; iter_limit=M.iter_limit, kw...)
 end
 
 
-function step!(M::LimitIters, fdf::F; kw...) where {F}
-    s = step!(M.descent, fdf; kw...)
+function step!(fdf::F, M::LimitIters; kw...) where {F}
+    s = step!(fdf, M.descent; kw...)
     M.iter_count += 1
     return s
 end
@@ -180,29 +180,29 @@ stopcond(M::LimitIters) = M.iter_count < M.iter_limit ? stopcond(M.descent) : tr
 Wrapper type to limit step sizes attempted in optimization,
 given a function `(origin, direction) -> max_step`.
 """
-struct ConstrainStepSize{T<:AbstractOptBuffer, F} <: Wrapper
-    descent::T
+struct ConstrainStepSize{F, T<:AbstractOptBuffer} <: Wrapper
     constraint::F
+    descent::T
 end
 
-ConstrainStepSize(M::AbstractOptBuffer) = ConstrainStepSize(M, infstep)
+ConstrainStepSize(M::AbstractOptBuffer) = ConstrainStepSize(infstep, M)
 
 base_method(M::ConstrainStepSize) = M.descent
 
-function init!(M::ConstrainStepSize, args...; kw...)
-    init!(M.descent, args...; constrain_step=M.constraint, kw...)
+function init!(fdf, M::ConstrainStepSize, args...; kw...)
+    init!(fdf, M.descent, args...; constrain_step=M.constraint, kw...)
     return
 end
 
-step!(M::ConstrainStepSize, optfn!) = step!(M.descent, optfn!, constrain_step=M.constraint)
+step!(optfn!, M::ConstrainStepSize) = step!(optfn!, M.descent; constrain_step=M.constraint)
 
-struct OptFunc{M<:AbstractOptBuffer,F<:Base.Callable}<:Function
-    method::M
+struct OptFunc{F<:Base.Callable,M<:AbstractOptBuffer}<:Function
     fdf::F
+    buffer::M
 end
 
 function (optfn::OptFunc)(x, α, d)
-    y, g = callfn!(optfn.method, optfn.fdf, x, α, d)
+    y, g = callfn!(optfn.fdf, optfn.buffer, x, α, d)
     @logmsg OptLogLevel "$(join(x .+ α .* d, ' ')) $y $(join(g, ' '))"
     y, g
 end

@@ -5,9 +5,9 @@ CurrentModule = Downhill
 ```
 
 ```@docs
+optimize
+
 optimize!
 
 solver
-
-reset!
 ```
