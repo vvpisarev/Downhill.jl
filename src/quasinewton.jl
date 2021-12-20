@@ -5,7 +5,7 @@ Quasi-Newton descent method.
 """
 mutable struct BFGS{T<:AbstractFloat,
                     V<:AbstractVector{T},
-                    M<:AbstractMatrix{T}} <: CoreMethod
+                    M<:AbstractMatrix{T}} <: OptBuffer
     invH::M
     x::V
     g::V
@@ -40,7 +40,7 @@ function BFGS(x::AbstractVector{T}) where {T}
 end
 
 function init!(
-    M::BFGS{T}, optfn!, x0;
+    optfn!, M::BFGS{T}, x0;
     reset, constrain_step = infstep
 ) where {T}
     optfn!(x0, zero(T), x0)
@@ -87,7 +87,7 @@ function reset!(M::BFGS, x0, scale::Real=1)
     return M
 end
 
-@inline function callfn!(M::BFGS, fdf, x, α, d)
+@inline function callfn!(fdf, M::BFGS, x, α, d)
     __update_arg!(M, x, α, d)
     y, g = fdf(M.x, M.g)
     __update_grad!(M, g)
@@ -100,7 +100,7 @@ function __descent_dir!(M::BFGS)
     return M.d
 end
 
-function step!(M::BFGS, optfn!::F; constrain_step::S=infstep) where {F,S}
+function step!(optfn!::F, M::BFGS; constrain_step::S=infstep) where {F,S}
     #=
     argument and gradient from the end of the last
     iteration are stored into `xpre` and `gpre`

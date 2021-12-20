@@ -1,12 +1,10 @@
-name = "DescentMethods"
-uuid = "f4becde8-b16e-4b5a-8f91-16ef0c22c8bc"
-authors = ["Vasily <pisarevvv@phystech.edu>"]
+name = "Downhill"
+uuid = "a4c28711-7027-4a57-8564-74545b4697a4"
 version = "0.1.0"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
-Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [compat]
 julia = ">= 1.6"

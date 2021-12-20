@@ -1,4 +1,4 @@
-using DescentMethods
+using Downhill
 
 """
     rosenbrock(x; b=2)
@@ -58,7 +58,7 @@ ros!(x, g) = rosenbrock!(x, g)
 
 ans_nonmutating = let x0 = zeros(2)
     opt = BFGS(x0)
-    optresult = optimize!(opt, ros, x0; maxiter=1000, log_stream=tempname(cleanup=false), verbosity=2)
+    optresult = optimize!(ros, opt, x0; maxiter=1000)
     println("""
         ==Nonmutating gradient evaluation==
 
@@ -73,7 +73,7 @@ end
 
 ans_mutating = let x0 = zeros(2)
     opt = BFGS(x0)
-    optresult = optimize!(opt, ros!, x0; maxiter=1000)
+    optresult = optimize!(ros!, opt, x0; maxiter=1000)
     println("""
         ==Mutating gradient evaluation==
 

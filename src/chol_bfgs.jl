@@ -4,7 +4,7 @@ Quasi-Newton descent method.
 """
 mutable struct CholBFGS{T<:AbstractFloat,
                         V<:AbstractVector{T},
-                        C<:Cholesky{T}} <: CoreMethod
+                        C<:Cholesky{T}} <: OptBuffer
     hess::C
     x::V
     g::V
@@ -43,7 +43,7 @@ function CholBFGS(x::AbstractVector{T}) where {T}
 end
 
 function init!(
-    M::CholBFGS{T}, optfn!, x0;
+    optfn!, M::CholBFGS{T}, x0;
     reset, constrain_step = infstep
 ) where {T}
     optfn!(x0, zero(T), x0)
@@ -97,7 +97,7 @@ function reset!(M::CholBFGS, x0, init_H::AbstractMatrix)
     return
 end
 
-function callfn!(M::CholBFGS, fdf::F, x, α, d) where {F}
+function callfn!(fdf::F, M::CholBFGS, x, α, d) where {F}
     __update_arg!(M, x, α, d)
     y, g = fdf(M.x, M.g)
     __update_grad!(M, g)
@@ -113,7 +113,7 @@ function __descent_dir!(M::CholBFGS)
     return M.d
 end
 
-function step!(M::CholBFGS, optfn!::F; constrain_step=infstep) where {F}
+function step!(optfn!::F, M::CholBFGS; constrain_step=infstep) where {F}
     #=
     argument and gradient from the end of the last
     iteration are stored into `xpre` and `gpre`

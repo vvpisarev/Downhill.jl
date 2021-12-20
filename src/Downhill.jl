@@ -1,7 +1,6 @@
-module DescentMethods
+module Downhill
 
 using LinearAlgebra
-using Printf: Format, format
 using Logging
 using Logging: Info, default_logcolor, default_metafmt
 
@@ -9,7 +8,7 @@ export FixedRateDescent, MomentumDescent, NesterovMomentum
 export SteepestDescent, HyperGradDescent, CGDescent
 export BFGS, CholBFGS
 
-export optimize!
+export optimize!, optimize
 
 include("utils.jl")
 include("abstract_types.jl")

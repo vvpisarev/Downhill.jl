@@ -1,13 +1,13 @@
 # Basic Functions
 
 ```@meta
-CurrentModule = DescentMethods
+CurrentModule = Downhill
 ```
 
 ```@docs
+optimize
+
 optimize!
 
 solver
-
-reset!
 ```

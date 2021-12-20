@@ -4,7 +4,7 @@
 Descent method which minimizes the objective function in the direction
 of antigradient at each step.
 """
-mutable struct SteepestDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
+mutable struct SteepestDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     x::V
     xpre::V
     g::V
@@ -28,7 +28,7 @@ SteepestDescent(x::AbstractVector) = SteepestDescent(x, 1)
 """
 `optfn!` must be the 3-arg closure that computes fdf(x + α*d) and overwrites `M`'s gradient
 """
-function init!(::SteepestDescent{T}, optfn!, x0; kw...) where {T}
+function init!(optfn!, ::SteepestDescent{T}, x0; kw...) where {T}
     optfn!(x0, zero(T), x0)
     return
 end
@@ -45,7 +45,7 @@ function reset!(M::SteepestDescent, x0, α = M.α)
     return
 end
 
-function callfn!(M::SteepestDescent, fdf, x, α, d)
+function callfn!(fdf, M::SteepestDescent, x, α, d)
     __update_arg!(M, x, α, d)
     y, g = fdf(M.x, M.g)
     __update_grad!(M, g)
@@ -58,7 +58,7 @@ end
     return M.dir
 end
 
-function step!(M::SteepestDescent, optfn!; constrain_step = infstep)
+function step!(optfn!, M::SteepestDescent; constrain_step = infstep)
     M.x, M.xpre = M.xpre, M.x
     d = __descent_dir!(M)
     xpre = M.xpre

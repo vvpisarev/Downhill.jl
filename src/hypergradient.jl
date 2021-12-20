@@ -4,7 +4,7 @@
 Descent method which minimizes the objective function in the direction
 of antigradient at each step.
 """
-mutable struct HyperGradDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
+mutable struct HyperGradDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     x::V
     g::V
     gpre::V
@@ -29,7 +29,7 @@ end
 
 HyperGradDescent(x::AbstractVector{T}) where {T} = HyperGradDescent(x, 0, 1e-4)
 
-function init!(M::HyperGradDescent{T}, optfn!, x0; reset, kw...) where {T}
+function init!(optfn!, M::HyperGradDescent{T}, x0; reset, kw...) where {T}
     reset != false && reset!(M, x0)
     optfn!(x0, zero(T), x0)
     fill!(M.gpre, false)
@@ -52,14 +52,14 @@ function reset!(M::HyperGradDescent{T}, x0, α = zero(T), μ = M.μ) where {T}
     return M
 end
 
-@inline function callfn!(M::HyperGradDescent, fdf, x, α, d)
+@inline function callfn!(fdf, M::HyperGradDescent, x, α, d)
     __update_arg!(M, x, α, d)
     y, g = fdf(M.x, M.g)
     __update_grad!(M, g)
     return y, g
 end
 
-function step!(M::HyperGradDescent, optfn!; constrain_step = infstep)
+function step!(optfn!, M::HyperGradDescent; constrain_step = infstep)
     M.gpre, M.g = M.g, M.gpre
     M.α += abs(M.μ * dot(M.g, M.gpre))
     d = rmul!(M.gpre, -1)
