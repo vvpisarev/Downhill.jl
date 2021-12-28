@@ -181,11 +181,11 @@ Wrapper type to limit step sizes attempted in optimization,
 given a function `(origin, direction) -> max_step`.
 """
 struct ConstrainStepSize{F, T<:AbstractOptBuffer} <: Wrapper
-    constraint::F
     descent::T
+    constraint::F
 end
 
-ConstrainStepSize(M::AbstractOptBuffer) = ConstrainStepSize(infstep, M)
+ConstrainStepSize(M::AbstractOptBuffer) = ConstrainStepSize(M, infstep)
 
 base_method(M::ConstrainStepSize) = M.descent
 
