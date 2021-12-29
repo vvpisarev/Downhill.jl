@@ -67,16 +67,14 @@ function strong_backtracking!(
         g = dot(grad, d)
         Δyp = (g + g0) * α / 2 # parabolic approximation
         if abs(Δyp) < ϵ
-            @logmsg LSLogLevel ""
-            """
+            @logmsg LSLogLevel "" """
                 Δyp = $(Δyp) (*)
                 Δy = $(y-y0)
             """
             Δy = Δyp
         else
             Δy = y - y0
-            @logmsg LSLogLevel ""
-            """
+            @logmsg LSLogLevel "" """
                 Δyp = $(Δyp)
                 Δy = $(Δy) (*)
             """
