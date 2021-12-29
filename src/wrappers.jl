@@ -183,9 +183,13 @@ given a function `(origin, direction) -> max_step`.
 struct ConstrainStepSize{F, T<:AbstractOptBuffer} <: Wrapper
     descent::T
     constraint::F
+
+    function ConstrainStepSize(constr::F, optbuf::T) where {F,T<:AbstractOptBuffer}
+        return new{F,T}(optbuf, constr)
+    end
 end
 
-ConstrainStepSize(M::AbstractOptBuffer) = ConstrainStepSize(M, infstep)
+ConstrainStepSize(M::AbstractOptBuffer) = ConstrainStepSize(infstep, M)
 
 base_method(M::ConstrainStepSize) = M.descent
 

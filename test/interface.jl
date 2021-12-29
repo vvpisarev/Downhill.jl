@@ -27,6 +27,7 @@ end
                 gtol=1e-3,
                 maxiter=100,
                 maxcalls=1000,
+                constrain_step = (x, d) -> Inf,
             )
             @test optimize!(rosenbrock!, opt, init_vec) isa NamedTuple
         end

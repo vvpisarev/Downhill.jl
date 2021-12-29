@@ -124,7 +124,7 @@ function optimize!(
         M = LimitCalls(M, maxcalls)
     end
     if !isnothing(constrain_step)
-        M = ConstrainStepSize(M, constrain_step)
+        M = ConstrainStepSize(constrain_step, M)
     end
     optimize!(fdf, M, x0; reset, tracking, verbosity)
 end
@@ -181,7 +181,7 @@ function solver(
         M = LimitCalls(M, maxcalls)
     end
     if !isnothing(constrain_step)
-        M = ConstrainStepSize(M, constrain_step)
+        M = ConstrainStepSize(constrain_step, M)
     end
     return M
 end
