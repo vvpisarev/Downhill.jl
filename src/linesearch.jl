@@ -67,11 +67,19 @@ function strong_backtracking!(
         g = dot(grad, d)
         Δyp = (g + g0) * α / 2 # parabolic approximation
         if abs(Δyp) < ϵ
-            @warn "Function change is too small, using parabolic approximation" Δyp Δy=y-y0
+            @logmsg LSLogLevel ""
+            """
+                Δyp = $(Δyp) (*)
+                Δy = $(y-y0)
+            """
             Δy = Δyp
         else
             Δy = y - y0
-            @logmsg LSLogLevel "Δy = $(Δy)"
+            @logmsg LSLogLevel ""
+            """
+                Δyp = $(Δyp)
+                Δy = $(Δy) (*)
+            """
         end
         if Δy > α * wolfe1 || y >= y_prev + ϵ # x >= NaN is always false
             αlo, αhi, ylo, yhi, glo, ghi = α_prev, α, y_prev, y, g_prev, g
