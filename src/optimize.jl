@@ -110,19 +110,12 @@ function optimize!(
     tracking = nothing,
     verbosity::Integer=0,
 )
-    if !isnothing(gtol) && gtol > 0
-        M = StopByGradient(M, gtol)
-    end
-    if isnothing(maxiter) || maxiter < 0
-        M = LimitIters(M)
-    else
-        M = LimitIters(M, maxiter)
-    end
-    if isnothing(maxcalls) || maxcalls < 0
-        M = LimitCalls(M)
-    else
-        M = LimitCalls(M, maxcalls)
-    end
+    grad_tol = (isnothing(gtol) || gtol < 0) ? zero(eltype(x0)) : gtol
+    iter_limit = (isnothing(maxiter) || maxiter < 0) ? typemax(Int) : convert(Int, maxiter)
+    call_limit = (isnothing(maxcalls) || maxcalls < 0) ?
+        typemax(Int) :
+        convert(Int, maxcalls)
+    M = BasicConvergenceStats(M; gtol = grad_tol, iter_limit, call_limit)
     if !isnothing(constrain_step)
         M = ConstrainStepSize(constrain_step, M)
     end
@@ -167,19 +160,12 @@ function solver(
     maxcalls=nothing,
     constrain_step=nothing,
 )
-    if !isnothing(gtol) && gtol > 0
-        M = StopByGradient(M, gtol)
-    end
-    if isnothing(maxiter) || maxiter < 0
-        M = LimitIters(M)
-    else
-        M = LimitIters(M, maxiter)
-    end
-    if isnothing(maxcalls) || maxcalls < 0
-        M = LimitCalls(M)
-    else
-        M = LimitCalls(M, maxcalls)
-    end
+    grad_tol = (isnothing(gtol) || gtol < 0) ? zero(eltype(x0)) : gtol
+    iter_limit = (isnothing(maxiter) || maxiter < 0) ? typemax(Int) : convert(Int, maxiter)
+    call_limit = (isnothing(maxcalls) || maxcalls < 0) ?
+        typemax(Int) :
+        convert(Int, maxcalls)
+    M = BasicConvergenceStats(M; gtol = grad_tol, iter_limit, call_limit)
     if !isnothing(constrain_step)
         M = ConstrainStepSize(constrain_step, M)
     end

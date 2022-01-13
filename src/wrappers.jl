@@ -72,107 +72,83 @@ function convstat(M::Wrapper)
 end
 
 """
-    StopByGradient
+    BasicConvergenceStats
 
-Wrapper type to stop optimization once the magnitude of gradient
-is less than the specified value.
+Wrapper type to provide basic stop conditions: magnitude of gradient is less than the
+    specified value, objective function call count exceeds threshold, iteration count
+    exceeds threshold.
 """
-struct StopByGradient{T<:AbstractOptBuffer, F} <: Wrapper
+mutable struct BasicConvergenceStats{T<:AbstractOptBuffer,F} <: Wrapper
     descent::T
     gtol::F
-end
-
-base_method(M::StopByGradient) = M.descent
-
-function stopcond(M::StopByGradient)
-    base = M.descent
-    norm(gradientvec(base)) <= M.gtol ? true : stopcond(base)
-end
-
-function conv_success(M::StopByGradient)
-    base = M.descent
-    norm(gradientvec(base), Inf) <= M.gtol ? true : conv_success(base)
-end
-
-"""
-    LimitCalls
-
-Wrapper type to stop optimization once the number of
-the objective function calls exceeds the specified value.
-"""
-mutable struct LimitCalls{T<:AbstractOptBuffer}<:Wrapper
-    descent::T
     call_limit::Int
     call_count::Int
+    iter_limit::Int
+    iter_count::Int
+
+    function BasicConvergenceStats(
+        M::T;
+        gtol,
+        call_limit=typemax(Int),
+        iter_limit=typemax(Int),
+    ) where {T<:AbstractOptBuffer}
+        F = float(typeof(gtol))
+        return new{T, F}(M, gtol, call_limit, 0, iter_limit, 0)
+    end
 end
 
-LimitCalls(M::AbstractOptBuffer) = LimitCalls(M, typemax(Int), 0)
-LimitCalls(M::AbstractOptBuffer, maxcalls::Integer) = LimitCalls(M, maxcalls, 0)
+base_method(M::BasicConvergenceStats) = M.descent
 
-base_method(M::LimitCalls) = M.descent
-
-function init!(fdf, M::LimitCalls, args...; kw...)
+function init!(fdf, M::BasicConvergenceStats, args...; kw...)
     M.call_count = 0
+    M.iter_count = 0
     init!(fdf, M.descent, args...; kw...)
     return
 end
 
-function reset!(M::LimitCalls, args...; call_limit, kw...)
+function reset!(M::BasicConvergenceStats, args...; kw...)
     M.call_count = 0
-    M.call_limit = call_limit
+    M.iter_count = 0
     reset!(M.descent, args...; kw...)
     return
 end
 
-function callfn!(fdf::F, M::LimitCalls, x, α, d) where {F}
+function callfn!(fdf::F, M::BasicConvergenceStats, x, α, d) where {F}
     fg = callfn!(fdf, M.descent, x, α, d)
     M.call_count += 1
     return fg
 end
 
-stopcond(M::LimitCalls) = M.call_count < M.call_limit ? stopcond(M.descent) : true
-call_count(M::LimitCalls) = M.call_count
-
-"""
-    LimitIters
-
-Wrapper type to stop optimization once the number of
-the optimization iterations exceeds the specified value.
-"""
-mutable struct LimitIters{T<:AbstractOptBuffer}<:Wrapper
-    descent::T
-    iter_limit::Int
-    iter_count::Int
-end
-
-LimitIters(M::AbstractOptBuffer) = LimitIters(M, typemax(Int), 0)
-LimitIters(M::AbstractOptBuffer, maxiters::Integer) = LimitIters(M, maxiters, 0)
-
-base_method(M::LimitIters) = M.descent
-
-function init!(fdf, M::LimitIters, args...; kw...)
-    M.iter_count = 0
-    init!(fdf, M.descent, args...; kw...)
-    return
-end
-
-function reset!(M::LimitIters, args...; iter_limit=M.iter_limit, kw...)
-    M.iter_count = 0
-    M.iter_limit = iter_limit
-    reset!(M.descent, args...; kw...)
-    return
-end
-
-
-function step!(fdf::F, M::LimitIters; kw...) where {F}
+function step!(fdf::F, M::BasicConvergenceStats; kw...) where {F}
     s = step!(fdf, M.descent; kw...)
     M.iter_count += 1
     return s
 end
 
-stopcond(M::LimitIters) = M.iter_count < M.iter_limit ? stopcond(M.descent) : true
+function stopcond(M::BasicConvergenceStats)
+    base = M.descent
+    if norm(gradientvec(base), Inf) <= M.gtol
+        return true
+    elseif M.call_count >= M.call_limit
+        return true
+    elseif M.iter_count >= M.iter_limit
+        return true
+    else
+        return stopcond(base)
+    end
+end
 
-@inline iter_count(M::LimitIters) = M.iter_count
+function conv_success(M::BasicConvergenceStats)
+    base = M.descent
+    if norm(gradientvec(base), Inf) <= M.gtol
+        return true
+    else
+        return conv_success(base)
+    end
+end
+
+@inline iter_count(M::BasicConvergenceStats) = M.iter_count
+@inline call_count(M::BasicConvergenceStats) = M.call_count
 
 """
     ConstrainStepSize
