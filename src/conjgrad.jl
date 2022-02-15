@@ -80,19 +80,19 @@ function callfn!(fdf, M::CGDescent, x, α, d)
 end
 
 function step!(optfn!, M::CGDescent; constrain_step = infstep)
+    M.ypre = M.y
     M.x, M.xpre = M.xpre, M.x
     map!(-, M.gdiff, M.g, M.gpre)
 
     d = __descent_dir!(M)
     xpre = M.xpre
     M.g, M.gpre = M.gpre, M.g
-    ypre = M.y
     maxstep = constrain_step(xpre, d)
     α = strong_backtracking!(
-        optfn!, xpre, d, ypre, M.gpre;
+        optfn!, xpre, d, M.ypre, M.gpre;
         α = M.α, αmax = maxstep, β = 0.01, σ = 0.1
     )
-    fdiff = M.y - ypre
+    fdiff = M.y - M.ypre
     if fdiff < 0
         M.α = 2 * fdiff / dot(d, M.gpre)
     end
