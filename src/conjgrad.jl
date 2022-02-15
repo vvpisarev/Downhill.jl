@@ -11,27 +11,25 @@ mutable struct CGDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     gdiff::V
     dir::V
     y::T
+    ypre::T
     α::T
     α0::T
 end
 
-@inline fnval(M::CGDescent) = M.y
-@inline gradientvec(M::CGDescent) = M.g
-@inline argumentvec(M::CGDescent) = M.x
-@inline step_origin(M::CGDescent) = M.xpre
-
 function CGDescent(x::AbstractVector)
     F = float(eltype(x))
-    CGDescent(similar(x, F),
-              similar(x, F),
-              similar(x, F),
-              similar(x, F),
-              similar(x, F),
-              similar(x, F),
-              zero(F),
-              convert(F, 0.01),
-              convert(F, 0.01)
-             )
+    return CGDescent(
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        F(NaN),
+        F(NaN),
+        convert(F, 0.01),
+        convert(F, 0.01)
+    )
 end
 
 function __descent_dir!(M::CGDescent)

@@ -14,12 +14,8 @@ mutable struct CholBFGS{T<:AbstractFloat,
     xdiff::V
     gdiff::V
     y::T
+    ypre::T
 end
-
-@inline gradientvec(M::CholBFGS) = M.g
-@inline argumentvec(M::CholBFGS) = M.x
-@inline step_origin(M::CholBFGS) = M.xpre
-
 
 function CholBFGS(x::AbstractVector{T}) where {T}
     F = float(T)
@@ -29,17 +25,18 @@ function CholBFGS(x::AbstractVector{T}) where {T}
         m[i,j] = (i == j)
     end
     cm = cholesky!(m)
-    bfgs = CholBFGS(cm,
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                zero(F)
-               )
-    return bfgs
+    return CholBFGS(
+        cm,
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        F(NaN),
+        F(NaN),
+    )
 end
 
 function init!(

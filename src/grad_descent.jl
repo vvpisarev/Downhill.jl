@@ -10,17 +10,21 @@ mutable struct SteepestDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuff
     g::V
     dir::V
     y::T
+    ypre::T
     α::T
 end
 
-@inline fnval(M::SteepestDescent) = M.y
-@inline gradientvec(M::SteepestDescent) = M.g
-@inline argumentvec(M::SteepestDescent) = M.x
-@inline step_origin(M::SteepestDescent) = M.xpre
-
 function SteepestDescent(x::AbstractVector, α::Real)
     F = float(eltype(x))
-    SteepestDescent(similar(x, F), similar(x, F), similar(x, F), similar(x, F), zero(F), convert(F, α))
+    return SteepestDescent(
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        F(NaN),
+        F(NaN),
+        convert(F, α),
+    )
 end
 
 SteepestDescent(x::AbstractVector) = SteepestDescent(x, 1)

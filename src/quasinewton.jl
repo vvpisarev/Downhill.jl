@@ -15,12 +15,8 @@ mutable struct BFGS{T<:AbstractFloat,
     xdiff::V
     gdiff::V
     y::T
+    ypre::T
 end
-
-@inline fnval(M::BFGS) = M.y
-@inline gradientvec(M::BFGS) = M.g
-@inline argumentvec(M::BFGS) = M.x
-@inline step_origin(M::BFGS) = M.xpre
 
 function BFGS(x::AbstractVector{T}) where {T}
     F = float(T)
@@ -33,7 +29,8 @@ function BFGS(x::AbstractVector{T}) where {T}
         similar(x, F),
         similar(x, F),
         similar(x, F),
-        zero(F)
+        F(NaN),
+        F(NaN),
     )
     reset!(bfgs)
     return bfgs

@@ -6,15 +6,14 @@ of antigradient at each step.
 """
 mutable struct HyperGradDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     x::V
+    xpre::V
     g::V
     gpre::V
+    y::T
+    ypre::T
     α::T
     μ::T
 end
-
-@inline gradientvec(M::HyperGradDescent) = M.g
-@inline argumentvec(M::HyperGradDescent) = M.x
-@inline step_origin(M::HyperGradDescent) = M.x
 
 function HyperGradDescent(x::AbstractVector{T}, α::Real, μ::Real) where {T}
     F = float(T)
@@ -22,6 +21,9 @@ function HyperGradDescent(x::AbstractVector{T}, α::Real, μ::Real) where {T}
         similar(x, F),
         similar(x, F),
         similar(x, F),
+        similar(x, F),
+        F(NaN),
+        F(NaN),
         convert(F, α),
         convert(F, μ),
     )

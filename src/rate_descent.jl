@@ -6,17 +6,23 @@ of antigradient at each step.
 """
 mutable struct FixedRateDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     x::V
+    xpre::V
     g::V
     α::T
+    y::T
+    ypre::T
 end
-
-@inline gradientvec(M::FixedRateDescent) = M.g
-@inline argumentvec(M::FixedRateDescent) = M.x
-@inline step_origin(M::FixedRateDescent) = M.x
 
 function FixedRateDescent(x::AbstractVector, α::Real)
     F = float(eltype(x))
-    FixedRateDescent(similar(x, F), similar(x, F), convert(F, α))
+    return FixedRateDescent(
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        convert(F, α),
+        F(NaN),
+        F(NaN),
+    )
 end
 
 FixedRateDescent(x::AbstractVector) = FixedRateDescent(x, 0.01)
@@ -82,27 +88,26 @@ of antigradient at each step.
 """
 mutable struct MomentumDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     x::V
+    xpre::V
     g::V
     v::V
     learn_rate::T
     decay_rate::T
+    y::T
+    ypre::T
 end
 
-@inline gradientvec(M::MomentumDescent) = M.g
-@inline argumentvec(M::MomentumDescent) = M.x
-@inline step_origin(M::MomentumDescent) = M.x
-
-function MomentumDescent(
-    x::AbstractVector;
-    learn_rate::Real = 0.01, decay_rate::Real = 0.9
-)
+function MomentumDescent(x::AbstractVector; learn_rate::Real=0.01, decay_rate::Real=0.9)
     F = float(eltype(x))
     return MomentumDescent(
         similar(x, F),
         similar(x, F),
         similar(x, F),
+        similar(x, F),
         convert(F, learn_rate),
         convert(F, decay_rate),
+        F(NaN),
+        F(NaN),
     )
 end
 
@@ -184,15 +189,14 @@ of antigradient at each step.
 """
 mutable struct NesterovMomentum{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     x::V
+    xpre::V
     g::V
     v::V
     α::T # learning rate
     β::T # decay rate
+    y::T
+    ypre::T
 end
-
-@inline gradientvec(M::NesterovMomentum) = M.g
-@inline argumentvec(M::NesterovMomentum) = M.x
-@inline step_origin(M::NesterovMomentum) = M.x
 
 function NesterovMomentum(x::AbstractVector; learn_rate::Real=0.01, decay_rate::Real=0.9)
     F = float(eltype(x))
@@ -205,8 +209,11 @@ function NesterovMomentum(x::AbstractVector; learn_rate::Real=0.01, decay_rate::
         similar(x, F),
         similar(x, F),
         similar(x, F),
+        similar(x, F),
         convert(F, α),
         convert(F, β),
+        F(NaN),
+        F(NaN),
     )
 end
 
