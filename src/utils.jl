@@ -1,4 +1,5 @@
 infstep(x0, d) = convert(eltype(d), Inf)
+stopbygradient(tol::Real) = (x, xpre, y, ypre, g) -> norm(g, 2) ≤ tol
 
 #=
 A generic way to create a mutable N×N matrix from a length-N vector.

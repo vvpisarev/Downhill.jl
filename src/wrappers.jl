@@ -80,7 +80,8 @@ Wrapper type to provide basic stop conditions: magnitude of gradient is less tha
 """
 mutable struct BasicConvergenceStats{T<:AbstractOptBuffer,F} <: Wrapper
     descent::T
-    gtol::F
+    convcond::F
+    converged::Bool
     call_limit::Int
     call_count::Int
     iter_limit::Int
@@ -88,12 +89,11 @@ mutable struct BasicConvergenceStats{T<:AbstractOptBuffer,F} <: Wrapper
 
     function BasicConvergenceStats(
         M::T;
-        gtol,
+        convcond::F,
         call_limit=typemax(Int),
         iter_limit=typemax(Int),
-    ) where {T<:AbstractOptBuffer}
-        F = float(typeof(gtol))
-        return new{T, F}(M, gtol, call_limit, 0, iter_limit, 0)
+    ) where {T<:AbstractOptBuffer, F<:Base.Callable}
+        return new{T, F}(M, convcond, false, call_limit, 0, iter_limit, 0)
     end
 end
 
@@ -102,6 +102,7 @@ base_method(M::BasicConvergenceStats) = M.descent
 function init!(fdf, M::BasicConvergenceStats, args...; kw...)
     M.call_count = 0
     M.iter_count = 0
+    M.converged = false
     init!(fdf, M.descent, args...; kw...)
     return
 end
@@ -109,6 +110,7 @@ end
 function reset!(M::BasicConvergenceStats, args...; kw...)
     M.call_count = 0
     M.iter_count = 0
+    M.converged = false
     reset!(M.descent, args...; kw...)
     return
 end
@@ -126,8 +128,14 @@ function step!(fdf::F, M::BasicConvergenceStats; kw...) where {F}
 end
 
 function stopcond(M::BasicConvergenceStats)
-    base = M.descent
-    if norm(gradientvec(base), Inf) <= M.gtol
+    base = base_method(M)
+
+    x, xpre = argumentvec(base), step_origin(base)
+    y, ypre = fnval(base), fnval_origin(base)
+    g = gradientvec(base)
+    M.converged = M.convcond(x, xpre, y, ypre, g)
+
+    if M.converged
         return true
     elseif M.call_count >= M.call_limit
         return true
@@ -139,8 +147,8 @@ function stopcond(M::BasicConvergenceStats)
 end
 
 function conv_success(M::BasicConvergenceStats)
-    base = M.descent
-    if norm(gradientvec(base), Inf) <= M.gtol
+    base = base_method(M)
+    if M.converged
         return true
     else
         return conv_success(base)
