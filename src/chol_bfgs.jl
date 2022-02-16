@@ -43,16 +43,18 @@ function init!(
     optfn!, M::CholBFGS{T}, x0;
     reset, constrain_step = infstep
 ) where {T}
-    optfn!(x0, zero(T), x0)
+    y, _ = optfn!(x0, zero(T), x0)
+    M.ypre = y
     M.xpre .= x0
     M.xdiff .= abs.(x0) .+ 1
     if reset > 0
         M.xpre, M.x = M.x, M.xpre
         M.gpre, M.g = M.g, M.gpre
+        M.ypre = M.y
         map!(-, M.d, M.gpre)
         lmul!(reset, M.d)
         αmax = constrain_step(M.xpre, M.d)
-        α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, αmax = αmax, β = one(T)/100, σ = convert(T, 0.1))
+        α = strong_backtracking!(optfn!, M.xpre, M.d, M.ypre, M.gpre, αmax = αmax, β = one(T)/100, σ = convert(T, 0.1))
         map!(-, M.xdiff, M.x, M.xpre)
         map!(-, M.gdiff, M.g, M.gpre)
 
@@ -117,11 +119,12 @@ function step!(optfn!::F, M::CholBFGS; constrain_step=infstep) where {F}
     =#
     M.gpre, M.g = M.g, M.gpre
     M.xpre, M.x = M.x, M.xpre
+    M.ypre = M.y
 
     x, xpre, g, gpre, H = M.x, M.xpre, M.g, M.gpre, M.hess
     d = __descent_dir!(M)
     maxstep = constrain_step(xpre, d)
-    α = strong_backtracking!(optfn!, xpre, d, M.y, gpre, αmax = maxstep, β = 0.01, σ = 0.9)
+    α = strong_backtracking!(optfn!, xpre, d, M.ypre, gpre, αmax = maxstep, β = 0.01, σ = 0.9)
     if α > 0
         #=
         BFGS update:

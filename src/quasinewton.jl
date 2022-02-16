@@ -44,10 +44,11 @@ function init!(
     if reset
         M.xpre, M.x = M.x, M.xpre
         M.gpre, M.g = M.g, M.gpre
+        M.ypre = M.y
         map!(-, M.d, M.gpre)
         αmax = constrain_step(M.xpre, M.d)
         α = strong_backtracking!(
-            optfn!, M.xpre, M.d, M.y, M.gpre;
+            optfn!, M.xpre, M.d, M.ypre, M.gpre;
             αmax=αmax, β=one(T)/100, σ=one(T)/10
         )
         map!(-, M.xdiff, M.x, M.xpre)
@@ -104,11 +105,12 @@ function step!(optfn!::F, M::BFGS; constrain_step::S=infstep) where {F,S}
     =#
     M.gpre, M.g = M.g, M.gpre
     M.xpre, M.x = M.x, M.xpre
+    M.ypre = M.y
 
     x, xpre, g, gpre, invH = M.x, M.xpre, M.g, M.gpre, M.invH
     d = __descent_dir!(M)
     maxstep = constrain_step(xpre, d)
-    α = strong_backtracking!(optfn!, xpre, d, M.y, gpre, αmax = maxstep, β = 0.01, σ = 0.9)
+    α = strong_backtracking!(optfn!, xpre, d, M.ypre, gpre, αmax = maxstep, β = 0.01, σ = 0.9)
     if α > 0
         #=
         BFGS update:
