@@ -1,7 +1,7 @@
 @testset "Convergence on the Rosenbrock function" begin
     dim = 2
     x0 = fill(-1, dim)
-    @testset "Default behavior" begin
+    @testset "By gradient norm (default)" begin
         for method in OPT_TYPES
             opt = method(x0)
             optresult = optimize!(
@@ -22,7 +22,7 @@
                 rosenbrock!, opt, x0;
                 maxiter=1000,
                 constrain_step=(x0,d)->Inf,
-                convcond=(x, xpre, y, ypre, g) -> norm(x - xpre, 2) ≤ 1000*eps(),
+                convcond=(x, xpre, y, ypre, g) -> norm(x - xpre, 2) ≤ 1e-6,
             )
             @testset "$method" begin
                 @test optresult.converged
