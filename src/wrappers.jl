@@ -3,6 +3,8 @@ function base_method(::AbstractOptBuffer) end
 argumentvec(M::Wrapper) = argumentvec(base_method(M))
 gradientvec(M::Wrapper) = gradientvec(base_method(M))
 step_origin(M::Wrapper) = step_origin(base_method(M))
+fnval(M::Wrapper) = fnval(base_method(M))
+fnval_origin(M::Wrapper) = fnval_origin(base_method(M))
 
 __descent_dir!(M::Wrapper) = __descent_dir!(base_method(M))
 
@@ -59,6 +61,9 @@ function convstat(M::Wrapper)
     # converged: $(converged)
     # final gradient: $(gradient)
     # final argument: $(argument)
+    # previous argument: $(step_origin(M))
+    # final func value: $(fnval(M))
+    # previous func value: $(fnval_origin(M))
     # number of iterations: $(iterations)
     # number of function calls: $(calls)
     """
