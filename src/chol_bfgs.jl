@@ -177,14 +177,3 @@ end
     end
     return
 end
-
-function stopcond(M::CholBFGS{T}) where {T}
-    rtol_x = 16 * eps(T)
-    xdiff, xpre = M.xdiff, M.xpre
-    for i in eachindex(xdiff, xpre)
-        if abs(xdiff[i]) > rtol_x * abs(xpre[i])
-            return false
-        end
-    end
-    return true
-end
