@@ -67,6 +67,7 @@ end
     optimize!(
         fdf, M::OptBuffer, x₀;
         gtol=1e-6,
+        convcond=nothing,
         maxiter=100,
         maxcalls=nothing,
         reset=true,
@@ -77,22 +78,49 @@ end
 
 Find an optimizer for `fdf`, starting with the initial approximation `x₀`.
 
-# Arguments:
+# Arguments
 - `M::OptBuffer`: the core method to use for optimization
 - `fdf(x, g)::Function`: function to optimize. It must return a tuple (f(x), ∇f(x)) and,
     if `g` is mutable, overwrite
     it with the gradient.
 - `x0`: initial approximation
 
-# Keywords:
-- `gtol::Real`: stop optimization when the gradient norm is less
+# Keywords
+
+## Convergence criteria
+
+There are two options to specify convergence criterion.
+The default is by `gtol` and the second by custom stop `convcond`.
+
+- `gtol::Real`: (default stop criterion) stop optimization when the gradient's 2-norm is less
+- `convcond=(x, xpre, y, ypre, g)->Bool`: function, custom stop criterion based on argument
+    values, function values and `g`radient. If `nothing` (default), corresponds to `gtol`,
+    and when specified, the `gtol`-criterion is ignored.
+
+Example (default criterion): `convcond = (x, xpre, y, ypre, g) -> norm(g, 2) ≤ gtol`.
+
+## Limitting optimization
+
+(Un)Limit optimization process by specifing either `maxiter` and/or `maxcalls`.
+
 - `maxiter::Integer`: force stop optimization after this number of iterations
     (use `nothing` or a negative value to not constrain iteration number)
 - `maxcalls::Integer`: force stop optimization after this number of function calls
     (use `nothing` or a negative value to not constrain call number)
-- `reset=true`: a value to pass as a keyword argument to the optimizer `init!` method
+
+## Optimization constrains
+
+The inequality constrains of optimization is handled by `constrain_step`.
+
 - `constrain_step(x0, d)`: a function to constrain step from `x0` in the direction `d`.
     It must return a real-numbered value `α` such that `x0 + αd` is the maximum allowed step
+
+## Initializing
+
+- `reset=true`: a value to pass as a keyword argument to the optimizer `init!` method
+
+## Optimization path
+
 - `tracking::Union{Nothing,IO,AbstractString}`: IO stream or a file name to log the
     optimization process or `nothing` to disable logging (default: `nothing`)
 - `verbosity::Integer`: verbosity of logging. `0` (default) disables tracking. `1` logs all
@@ -102,27 +130,22 @@ Find an optimizer for `fdf`, starting with the initial approximation `x₀`.
 """
 function optimize!(
     fdf, M::OptBuffer, x0;
-    gtol = convert(float(eltype(x0)), 1e-6),
-    maxiter = 100,
-    maxcalls = nothing,
-    reset = true,
-    constrain_step = nothing,
-    tracking = nothing,
+    gtol=convert(float(eltype(x0)), 1e-6),
+    convcond=nothing,
+    maxiter::Integer=100,
+    maxcalls=nothing,
+    reset=true,
+    constrain_step=nothing,
+    tracking=nothing,
     verbosity::Integer=0,
 )
-    if !isnothing(gtol) && gtol > 0
-        M = StopByGradient(M, gtol)
-    end
-    if isnothing(maxiter) || maxiter < 0
-        M = LimitIters(M)
-    else
-        M = LimitIters(M, maxiter)
-    end
-    if isnothing(maxcalls) || maxcalls < 0
-        M = LimitCalls(M)
-    else
-        M = LimitCalls(M, maxcalls)
-    end
+    grad_tol = (isnothing(gtol) || gtol < 0) ? zero(eltype(x0)) : gtol
+    convcond = isnothing(convcond) ? stopbygradient(grad_tol) : convcond
+    iter_limit = (isnothing(maxiter) || maxiter < 0) ? typemax(Int) : convert(Int, maxiter)
+    call_limit = (isnothing(maxcalls) || maxcalls < 0) ?
+        typemax(Int) :
+        convert(Int, maxcalls)
+    M = BasicConvergenceStats(M; convcond, iter_limit, call_limit)
     if !isnothing(constrain_step)
         M = ConstrainStepSize(constrain_step, M)
     end
@@ -163,23 +186,18 @@ Return the wrapper object for a chosen method to solve an optimization problem w
 function solver(
     M::OptBuffer;
     gtol=convert(eltype(argumentvec(M)), 1e-6),
+    convcond=nothing,
     maxiter=100,
     maxcalls=nothing,
     constrain_step=nothing,
 )
-    if !isnothing(gtol) && gtol > 0
-        M = StopByGradient(M, gtol)
-    end
-    if isnothing(maxiter) || maxiter < 0
-        M = LimitIters(M)
-    else
-        M = LimitIters(M, maxiter)
-    end
-    if isnothing(maxcalls) || maxcalls < 0
-        M = LimitCalls(M)
-    else
-        M = LimitCalls(M, maxcalls)
-    end
+    grad_tol = (isnothing(gtol) || gtol < 0) ? zero(eltype(x0)) : gtol
+    convcond = isnothing(convcond) ? stopbygradient(grad_tol) : convcond
+    iter_limit = (isnothing(maxiter) || maxiter < 0) ? typemax(Int) : convert(Int, maxiter)
+    call_limit = (isnothing(maxcalls) || maxcalls < 0) ?
+        typemax(Int) :
+        convert(Int, maxcalls)
+    M = BasicConvergenceStats(M; convcond, iter_limit, call_limit)
     if !isnothing(constrain_step)
         M = ConstrainStepSize(constrain_step, M)
     end

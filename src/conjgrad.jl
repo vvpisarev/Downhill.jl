@@ -11,27 +11,25 @@ mutable struct CGDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     gdiff::V
     dir::V
     y::T
+    ypre::T
     α::T
     α0::T
 end
 
-@inline fnval(M::CGDescent) = M.y
-@inline gradientvec(M::CGDescent) = M.g
-@inline argumentvec(M::CGDescent) = M.x
-@inline step_origin(M::CGDescent) = M.xpre
-
 function CGDescent(x::AbstractVector)
     F = float(eltype(x))
-    CGDescent(similar(x, F),
-              similar(x, F),
-              similar(x, F),
-              similar(x, F),
-              similar(x, F),
-              similar(x, F),
-              zero(F),
-              convert(F, 0.01),
-              convert(F, 0.01)
-             )
+    return CGDescent(
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        F(NaN),
+        F(NaN),
+        convert(F, 0.01),
+        convert(F, 0.01)
+    )
 end
 
 function __descent_dir!(M::CGDescent)
@@ -82,19 +80,19 @@ function callfn!(fdf, M::CGDescent, x, α, d)
 end
 
 function step!(optfn!, M::CGDescent; constrain_step = infstep)
+    M.ypre = M.y
     M.x, M.xpre = M.xpre, M.x
     map!(-, M.gdiff, M.g, M.gpre)
 
     d = __descent_dir!(M)
     xpre = M.xpre
     M.g, M.gpre = M.gpre, M.g
-    ypre = M.y
     maxstep = constrain_step(xpre, d)
     α = strong_backtracking!(
-        optfn!, xpre, d, ypre, M.gpre;
+        optfn!, xpre, d, M.ypre, M.gpre;
         α = M.α, αmax = maxstep, β = 0.01, σ = 0.1
     )
-    fdiff = M.y - ypre
+    fdiff = M.y - M.ypre
     if fdiff < 0
         M.α = 2 * fdiff / dot(d, M.gpre)
     end
