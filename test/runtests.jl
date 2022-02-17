@@ -1,7 +1,8 @@
 using Test
 
 using Downhill
-using Downhill: argumentvec, gradientvec, step_origin, mcholesky!
+using Downhill: argumentvec, gradientvec, step_origin, fnval, fnval_origin
+using Downhill: mcholesky!
 
 using LinearAlgebra
 

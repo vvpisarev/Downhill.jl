@@ -3,14 +3,23 @@
 
     descent_methods = map(T -> T(init_vec), OPT_TYPES)
 
-    interface = (
+    interface_vec = (
         argumentvec,
         gradientvec,
-        step_origin
+        step_origin,
     )
-    @testset "$(string(interface_func))" for interface_func in interface
+    @testset "$(string(interface_func))" for interface_func in interface_vec
         @testset "$(typeof(descent).name)" for descent in descent_methods
             @test size(interface_func(descent)) == size(init_vec)
+        end
+    end
+    interface_scalar = (
+        fnval,
+        fnval_origin,
+    )
+    @testset "$(string(interface_func))" for interface_func in interface_scalar
+        @testset "$(typeof(descent).name)" for descent in descent_methods
+            @test interface_func(descent) isa Number
         end
     end
 end
