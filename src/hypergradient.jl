@@ -1,36 +1,46 @@
-export HyperGradDescent
-
 """
     HyperGradDescent
 
-Descent method which minimizes the objective function in the direction 
+Descent method which minimizes the objective function in the direction
 of antigradient at each step.
 """
-mutable struct HyperGradDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
+mutable struct HyperGradDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     x::V
+    xpre::V
     g::V
     gpre::V
+    y::T
+    ypre::T
     α::T
     μ::T
 end
 
-@inline gradientvec(M::HyperGradDescent) = M.g
-@inline argumentvec(M::HyperGradDescent) = M.x
-
 function HyperGradDescent(x::AbstractVector{T}, α::Real, μ::Real) where {T}
     F = float(T)
-    HyperGradDescent(similar(x, F), similar(x, F), similar(x, F), convert(F, α), convert(F, μ))
+    return HyperGradDescent(
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        F(NaN),
+        F(NaN),
+        convert(F, α),
+        convert(F, μ),
+    )
 end
 
 HyperGradDescent(x::AbstractVector{T}) where {T} = HyperGradDescent(x, 0, 1e-4)
 
-function init!(::HyperGradDescent{T}, optfn!, x0; kw...) where {T}
+function init!(optfn!, M::HyperGradDescent{T}, x0; reset, kw...) where {T}
+    reset != false && reset!(M, x0)
     optfn!(x0, zero(T), x0)
-    return
+    fill!(M.gpre, false)
+    return M
 end
 
 @inline function reset!(M::HyperGradDescent)
-    M.α = 0
+    M.α = false
+    return M
 end
 
 function reset!(M::HyperGradDescent{T}, x0, α = zero(T), μ = M.μ) where {T}
@@ -41,19 +51,19 @@ function reset!(M::HyperGradDescent{T}, x0, α = zero(T), μ = M.μ) where {T}
     end
     M.α = α
     M.μ = μ
-    return
+    return M
 end
 
-@inline function callfn!(M::HyperGradDescent, fdf, x, α, d)
+@inline function callfn!(fdf, M::HyperGradDescent, x, α, d)
     __update_arg!(M, x, α, d)
     y, g = fdf(M.x, M.g)
     __update_grad!(M, g)
     return y, g
 end
 
-function step!(M::HyperGradDescent, optfn!; constrain_step = infstep)
+function step!(optfn!, M::HyperGradDescent; constrain_step = infstep)
     M.gpre, M.g = M.g, M.gpre
-    M.α += M.μ * dot(M.g, M.gpre)
+    M.α += abs(M.μ * dot(M.g, M.gpre))
     d = rmul!(M.gpre, -1)
     maxstep = constrain_step(M.x, d)
     s = maxstep > M.α ? M.α : maxstep / 2

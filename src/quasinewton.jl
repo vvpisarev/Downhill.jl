@@ -1,5 +1,3 @@
-export BFGS
-
 """
     BFGS
 
@@ -7,7 +5,7 @@ Quasi-Newton descent method.
 """
 mutable struct BFGS{T<:AbstractFloat,
                     V<:AbstractVector{T},
-                    M<:AbstractMatrix{T}} <: CoreMethod
+                    M<:AbstractMatrix{T}} <: OptBuffer
     invH::M
     x::V
     g::V
@@ -17,38 +15,42 @@ mutable struct BFGS{T<:AbstractFloat,
     xdiff::V
     gdiff::V
     y::T
+    ypre::T
 end
-
-@inline fnval(M::BFGS) = M.y
-@inline gradientvec(M::BFGS) = M.g
-@inline argumentvec(M::BFGS) = M.x
-@inline step_origin(M::BFGS) = M.xpre
 
 function BFGS(x::AbstractVector{T}) where {T}
     F = float(T)
-    bfgs = BFGS(similar(x, F, (length(x), length(x))),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                similar(x, F),
-                zero(T)
-               )
+    bfgs = BFGS(
+        sqmatr(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        F(NaN),
+        F(NaN),
+    )
     reset!(bfgs)
     return bfgs
 end
 
-function init!(M::BFGS{T}, optfn!, x0; 
-               reset, constrain_step = infstep) where {T}
+function init!(
+    optfn!, M::BFGS{T}, x0;
+    reset, constrain_step = infstep
+) where {T}
     optfn!(x0, zero(T), x0)
     if reset
         M.xpre, M.x = M.x, M.xpre
         M.gpre, M.g = M.g, M.gpre
+        M.ypre = M.y
         map!(-, M.d, M.gpre)
         αmax = constrain_step(M.xpre, M.d)
-        α = strong_backtracking!(optfn!, M.xpre, M.d, M.y, M.gpre, αmax = αmax, β = one(T)/100, σ = convert(T, 0.1))
+        α = strong_backtracking!(
+            optfn!, M.xpre, M.d, M.ypre, M.gpre;
+            αmax=αmax, β=one(T)/100, σ=one(T)/10
+        )
         map!(-, M.xdiff, M.x, M.xpre)
         map!(-, M.gdiff, M.g, M.gpre)
 
@@ -61,7 +63,7 @@ function init!(M::BFGS{T}, optfn!, x0;
             invH[i, i] = 1e-5 < elt / scale < 1e5 ? elt : scale
         end
     end
-    return
+    return M
 end
 
 @inline function reset!(M::BFGS)
@@ -70,7 +72,7 @@ end
     for j in 1:nc, i in 1:nr
         invH[i, j] = i == j
     end
-    return
+    return M
 end
 
 function reset!(M::BFGS, x0, scale::Real=1)
@@ -80,10 +82,10 @@ function reset!(M::BFGS, x0, scale::Real=1)
     for j in 1:nc, i in 1:nr
         invH[i, j] = (i == j) * scale
     end
-    return
+    return M
 end
 
-@inline function callfn!(M::BFGS, fdf, x, α, d)
+@inline function callfn!(fdf, M::BFGS, x, α, d)
     __update_arg!(M, x, α, d)
     y, g = fdf(M.x, M.g)
     __update_grad!(M, g)
@@ -96,32 +98,37 @@ function __descent_dir!(M::BFGS)
     return M.d
 end
 
-function step!(M::BFGS{T}, optfn!; constrain_step = infstep) where {T}
+function step!(optfn!::F, M::BFGS; constrain_step::S=infstep) where {F,S}
     #=
     argument and gradient from the end of the last
     iteration are stored into `xpre` and `gpre`
     =#
     M.gpre, M.g = M.g, M.gpre
     M.xpre, M.x = M.x, M.xpre
+    M.ypre = M.y
 
     x, xpre, g, gpre, invH = M.x, M.xpre, M.g, M.gpre, M.invH
     d = __descent_dir!(M)
     maxstep = constrain_step(xpre, d)
-    α = strong_backtracking!(optfn!, xpre, d, M.y, gpre, αmax = maxstep, β = 0.01, σ = 0.9)
-    #=
-    BFGS update:
-             δγ'B + Bγδ'   ⌈    γ'Bγ ⌉ δδ'
-    B <- B - ----------- + |1 + -----| ---
-                 δ'γ       ⌊     δ'γ ⌋ δ'γ
-    =#
-    δ, γ = M.xdiff, M.gdiff
-    map!(-, γ, g, gpre)
-    map!(-, δ, x, xpre)
-    denom = dot(δ, γ)
-    δscale = 1 + dot(γ, invH, γ) / denom
-    # d <- B * γ
-    mul!(d, invH, γ, 1, 0)
-    invH .= invH .- (δ .* d' .+ d .* δ') ./ denom .+ δscale .* δ .* δ' ./ denom
+    α = strong_backtracking!(optfn!, xpre, d, M.ypre, gpre, αmax = maxstep, β = 0.01, σ = 0.9)
+    if α > 0
+        #=
+        BFGS update:
+                δγ'B + Bγδ'   ⌈    γ'Bγ ⌉ δδ'
+        B <- B - ---------- + |1 + -----| ---
+                    δ'γ       ⌊     δ'γ ⌋ δ'γ
+        =#
+        δ, γ = M.xdiff, M.gdiff
+        map!(-, γ, g, gpre)
+        map!(-, δ, x, xpre)
+        denom = dot(δ, γ)
+        δscale = 1 + dot(γ, invH, γ) / denom
+        # d <- B * γ
+        mul!(d, invH, γ, 1, 0)
+        invH .= invH .- (δ .* d' .+ d .* δ') ./ denom .+ δscale .* δ .* δ' ./ denom
+    else
+        fill!(M.xdiff, 0)
+    end
     return α
 end
 
@@ -129,19 +136,19 @@ end
     map!(M.x, d, x) do a, b
         muladd(α, a, b)
     end
-    return
+    return M.x
 end
 
 @inline function __update_arg!(M::BFGS, x)
     if x !== M.x
         copy!(M.x, x)
     end
-    return
+    return M.x
 end
 
 @inline function __update_grad!(M::BFGS, g)
     if M.g !== g
         copy!(M.g, g)
     end
-    return
+    return M.g
 end

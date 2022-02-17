@@ -1,35 +1,38 @@
-export SteepestDescent
-
 """
     SteepestDescent
 
-Descent method which minimizes the objective function in the direction 
+Descent method which minimizes the objective function in the direction
 of antigradient at each step.
 """
-mutable struct SteepestDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: CoreMethod
+mutable struct SteepestDescent{T<:AbstractFloat,V<:AbstractVector{T}} <: OptBuffer
     x::V
     xpre::V
     g::V
     dir::V
     y::T
+    ypre::T
     α::T
 end
 
-@inline fnval(M::SteepestDescent) = M.y
-@inline gradientvec(M::SteepestDescent) = M.g
-@inline argumentvec(M::SteepestDescent) = M.x
-@inline step_origin(M::SteepestDescent) = M.xpre
-
 function SteepestDescent(x::AbstractVector, α::Real)
-    SteepestDescent(similar(x), similar(x), similar(x), similar(x), zero(eltype(x)), convert(eltype(x), α))
+    F = float(eltype(x))
+    return SteepestDescent(
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        similar(x, F),
+        F(NaN),
+        F(NaN),
+        convert(F, α),
+    )
 end
 
-SteepestDescent(x::AbstractVector) = SteepestDescent(x, one(eltype(x)))
+SteepestDescent(x::AbstractVector) = SteepestDescent(x, 1)
 
 """
 `optfn!` must be the 3-arg closure that computes fdf(x + α*d) and overwrites `M`'s gradient
 """
-function init!(::SteepestDescent{T}, optfn!, x0; kw...) where {T}
+function init!(optfn!, ::SteepestDescent{T}, x0; kw...) where {T}
     optfn!(x0, zero(T), x0)
     return
 end
@@ -46,7 +49,7 @@ function reset!(M::SteepestDescent, x0, α = M.α)
     return
 end
 
-function callfn!(M::SteepestDescent, fdf, x, α, d)
+function callfn!(fdf, M::SteepestDescent, x, α, d)
     __update_arg!(M, x, α, d)
     y, g = fdf(M.x, M.g)
     __update_grad!(M, g)
@@ -55,16 +58,17 @@ function callfn!(M::SteepestDescent, fdf, x, α, d)
 end
 
 @inline function __descent_dir!(M::SteepestDescent)
-    map!(-, M.dir, M.g)
+    M.dir .= .-M.g
     return M.dir
 end
 
-function step!(M::SteepestDescent, optfn!; constrain_step = infstep)
+function step!(optfn!, M::SteepestDescent; constrain_step = infstep)
     M.x, M.xpre = M.xpre, M.x
+    M.ypre = M.y
     d = __descent_dir!(M)
     xpre = M.xpre
     αmax = constrain_step(xpre, d)
-    α = strong_backtracking!(optfn!, xpre, d, M.y, M.g, α = M.α, αmax = maxstep, β = 1e-4, σ = 0.1)
+    α = strong_backtracking!(optfn!, xpre, d, M.ypre, M.g, α=M.α, αmax=αmax, β=1e-4, σ=0.1)
     return α
 end
 
