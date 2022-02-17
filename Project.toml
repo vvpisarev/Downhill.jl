@@ -1,6 +1,6 @@
 name = "Downhill"
 uuid = "a4c28711-7027-4a57-8564-74545b4697a4"
-version = "0.1.1"
+version = "0.2.0"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
