@@ -37,7 +37,7 @@ end
 """
     mcholesky!(A::AbstractMatrix)
 
-Perform an in-place modified Cholesky decomposition on matrix `A` (column-major version)
+Perform an in-place modified Cholesky decomposition on matrix `A`
 (Gill, Murray, Wright, Practical optimization (1981), p.111)
 """
 function mcholesky!(A::AbstractMatrix{T}; δ = convert(T, 1e-3)) where T
@@ -46,27 +46,29 @@ function mcholesky!(A::AbstractMatrix{T}; δ = convert(T, 1e-3)) where T
     ν = max(1, sqrt(n^2 - 1))
     β² = max(γ, ξ / ν, eps(T))
     θ = zero(T)
-    l = LowerTriangular(A)
-    c = l
-    δA = δ * min(1, maximum(abs(A[i,i]) for i in 1:n))
+    u = UpperTriangular(A)
+    δA = δ * min(1, maximum(abs(u[i,i]) for i in 1:n))
     @inbounds for j in 1:n
-        c_jj = c[j,j]
+        c_jj = u[j,j]
         θ = zero(c_jj)
         for k in 1:j-1
-            ljk = l[j,k]
-            for i in j:n
-                c[i,j] -= ljk * l[i,k]
-            end
-            θ = max(abs(c[j,k]), θ)
+            u[k,j] /= u[k,k]
         end
-        d_j = max(abs(A[j,j]), θ^2 / β², δA)
-        scjj = sqrt(d_j)
-        A[j,j] = scjj
         for i in j+1:n
-            c[i,j] = l[i,j] / scjj
+            c_ij = u[j,i]
+            for k in 1:j-1
+                c_ij -= u[k,j] * u[k,i] / u[k,k]
+            end
+            θ = max(abs(c_ij), θ)
+            u[j,i] = c_ij
+        end
+        d_j = max(abs(c_jj), θ^2 / β², δ)
+        u[j,j] = sqrt(d_j)
+        for i in j+1:n
+            u[i,i] -= (u[j,i] / u[j,j])^2
         end
     end
-    return Cholesky(A, 'L', 0)
+    return Cholesky(A, 'U', 0)
 end
 
 

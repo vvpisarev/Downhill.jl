@@ -24,7 +24,7 @@ function CholBFGS(x::AbstractVector{T}) where {T}
     for j in 1:n, i in 1:n
         m[i,j] = (i == j)
     end
-    cm = cholesky!(m)
+    cm = Cholesky(m, 'U', 0)
     return CholBFGS(
         cm,
         similar(x, F),
@@ -136,7 +136,7 @@ function step!(optfn!::F, M::CholBFGS; constrain_step=infstep) where {F}
         γ .= g .- gpre
         δ .= x .- xpre
 
-        U = LowerTriangular(H.factors)'
+        U = UpperTriangular(H.factors)
         #=
         H = H.U' * H.U
         d <- H.U * δ
