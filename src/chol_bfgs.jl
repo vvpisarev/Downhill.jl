@@ -136,7 +136,7 @@ function step!(optfn!::F, M::CholBFGS; constrain_step=infstep) where {F}
         γ .= g .- gpre
         δ .= x .- xpre
 
-        U = UpperTriangular(H.factors)
+        U = LowerTriangular(H.factors)'
         #=
         H = H.U' * H.U
         d <- H.U * δ
