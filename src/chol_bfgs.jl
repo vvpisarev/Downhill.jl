@@ -24,7 +24,7 @@ function CholBFGS(x::AbstractVector{T}) where {T}
     for j in 1:n, i in 1:n
         m[i,j] = (i == j)
     end
-    cm = cholesky!(m)
+    cm = Cholesky(m, 'U', 0)
     return CholBFGS(
         cm,
         similar(x, F),

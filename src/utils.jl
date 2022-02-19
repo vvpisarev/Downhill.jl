@@ -47,25 +47,25 @@ function mcholesky!(A::AbstractMatrix{T}; δ = convert(T, 1e-3)) where T
     β² = max(γ, ξ / ν, eps(T))
     θ = zero(T)
     u = UpperTriangular(A)
-    c = u
+    δA = δ * min(1, maximum(abs(u[i,i]) for i in 1:n))
     @inbounds for j in 1:n
-        c_jj = A[j,j]
+        c_jj = u[j,j]
         θ = zero(c_jj)
         for k in 1:j-1
             u[k,j] /= u[k,k]
         end
         for i in j+1:n
-            c_ij = c[j,i]
+            c_ij = u[j,i]
             for k in 1:j-1
-                c_ij -= u[k,j] * c[k,i] / u[k,k]
+                c_ij -= u[k,j] * u[k,i] / u[k,k]
             end
             θ = max(abs(c_ij), θ)
-            c[j,i] = c_ij
+            u[j,i] = c_ij
         end
         d_j = max(abs(c_jj), θ^2 / β², δ)
         u[j,j] = sqrt(d_j)
         for i in j+1:n
-            c[i,i] -= (c[j,i] / u[j,j])^2
+            u[i,i] -= (u[j,i] / u[j,j])^2
         end
     end
     return Cholesky(A, 'U', 0)
