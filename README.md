@@ -1,3 +1,5 @@
+[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://vvpisarev.github.io/PACKAGE_NAME.jl/latest)
+
 # Downhill.jl
 
 A collection of descent-based optimization methods.
