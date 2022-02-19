@@ -1,4 +1,4 @@
-[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://vvpisarev.github.io/Downhill.jl/latest)
+[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://vvpisarev.github.io/Downhill.jl/dev)
 
 # Downhill.jl
 
