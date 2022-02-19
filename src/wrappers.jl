@@ -1,3 +1,9 @@
+"""
+    base_method(M::AbstractOptBuffer)
+
+For a `Wrapper` object, return the wrapped buffer. For an `OptBuffer` object, return the
+    object itself.
+"""
 function base_method(::AbstractOptBuffer) end
 
 argumentvec(M::Wrapper) = argumentvec(base_method(M))
@@ -8,6 +14,13 @@ fnval_origin(M::Wrapper) = fnval_origin(base_method(M))
 
 __descent_dir!(M::Wrapper) = __descent_dir!(base_method(M))
 
+"""
+    callfn!(fdf, M::AbstractOptBuffer, x, α, d)
+
+Return the value of `fdf(x + α * d)` overwriting the internal buffers of `M` as needed.
+    `fdf(x, g)` must return a tuple (f(x), ∇f(x)) and, if `g` is mutable, overwrite
+    it with the gradient (see [`optimize!`](@ref)).
+"""
 @inline callfn!(fdf, M::Wrapper, x, α, d) = callfn!(fdf, base_method(M), x, α, d)
 
 function init!(fdf, M::Wrapper, args...; kw...)
@@ -28,11 +41,29 @@ function reset!(M::Wrapper, args...; kw...)
     return
 end
 
+"""
+    step!(fdf, M::AbstractOptBuffer; kw...)
+
+Make one iteration of optimization routine from the current state of `M` using `fdf` as the
+    objective function and modifying the internal buffers as needed.
+"""
 step!(fn::F, M::Wrapper; kw...) where {F} = step!(fn, base_method(M); kw...)
 
+"""
+    stopcond(M::AbstractOptBuffer)
+
+Decide if the optimization should be stopped from the state of `M`.
+"""
 stopcond(M::Wrapper) = stopcond(base_method(M))
 @inline stopcond(M::OptBuffer) = false
 
+"""
+    conv_success(M::AbstractOptBuffer)
+
+Decide if the optimization has converged from the state of `M` (useful to distinguish
+    between stopping by convergence and stopping by iterations count when the convergence
+    has been achieved on the limiting iteration).
+"""
 conv_success(M::Wrapper) = conv_success(base_method(M))
 @inline conv_success(M::OptBuffer) = false
 
