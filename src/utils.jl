@@ -40,14 +40,13 @@ end
 Perform an in-place modified Cholesky decomposition on matrix `A`
 (Gill, Murray, Wright, Practical optimization (1981), p.111)
 """
-function mcholesky!(A::AbstractMatrix{T}; δ = convert(T, 1e-3)) where T
+function mcholesky!(A::AbstractMatrix{T}; δ=eps(T)^(2/3)) where {T}
     n = LinearAlgebra.checksquare(A)
     γ, ξ = γξ(A)
     ν = max(1, sqrt(n^2 - 1))
     β² = max(γ, ξ / ν, eps(T))
-    θ = zero(T)
     u = UpperTriangular(A)
-    δA = δ * min(1, maximum(abs(u[i,i]) for i in 1:n))
+    δA = δ * γ # similar to the choice of Schnabel-Eskow (1999)
     @inbounds for j in 1:n
         c_jj = u[j,j]
         θ = zero(c_jj)
@@ -62,10 +61,11 @@ function mcholesky!(A::AbstractMatrix{T}; δ = convert(T, 1e-3)) where T
             θ = max(abs(c_ij), θ)
             u[j,i] = c_ij
         end
-        d_j = max(abs(c_jj), θ^2 / β², δ)
-        u[j,j] = sqrt(d_j)
+        d_j = max(abs(c_jj), θ^2 / β², δA)
+        u_jj = sqrt(d_j)
+        u[j,j] = u_jj
         for i in j+1:n
-            u[i,i] -= (u[j,i] / u[j,j])^2
+            u[i,i] -= (u[j,i] / u_jj)^2
         end
     end
     return Cholesky(A, 'U', 0)
