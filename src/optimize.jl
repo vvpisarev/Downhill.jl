@@ -72,7 +72,7 @@ end
         maxcalls=nothing,
         reset=true,
         constrain_step=nothing,
-        tracking=stdout,
+        tracking=nothing,
         verbosity=0
     )
 
