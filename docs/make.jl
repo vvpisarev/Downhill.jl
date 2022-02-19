@@ -11,6 +11,7 @@ makedocs(
         "index.md",
         "Optimization Methods" => "core_types.md",
         "Basic Functions" => "functions.md",
+        "Customization" => "wrappers.md"
     ],
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true"
