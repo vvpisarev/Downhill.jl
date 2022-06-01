@@ -70,3 +70,13 @@ end
         @test isapprox(α, α₀, rtol=0.05)
     end
 end
+
+@testset "Limited domain" begin
+    function fdf(x, α, d)
+        z = x[] + α * d[]
+        return z - sqrt(z), [1 - 0.5 / sqrt(z)]
+    end
+
+    α = Downhill.strong_backtracking!(fdf, [0.5], [-1.0])
+    @test isapprox(α, 0.25, rtol=0.05)
+end

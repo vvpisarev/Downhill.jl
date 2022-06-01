@@ -191,6 +191,7 @@ function solver(
     maxcalls=nothing,
     constrain_step=nothing,
 )
+    x0 = argumentvec(M)
     grad_tol = (isnothing(gtol) || gtol < 0) ? zero(eltype(x0)) : gtol
     convcond = isnothing(convcond) ? stopbygradient(grad_tol) : convcond
     iter_limit = (isnothing(maxiter) || maxiter < 0) ? typemax(Int) : convert(Int, maxiter)
