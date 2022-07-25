@@ -68,12 +68,16 @@ function strong_backtracking!(
             try
                 y, grad = fdf(x0, α, d)
                 break
-            catch
-                α = (α + α_prev) / 2
-                if α == α_prev
-                    @warn "==BRACKETING FAIL, LAST STEP VALUE RETURNED==" α
-                    @logmsg LSLogLevel "==LINEAR SEARCH INTERRUPTED=="
-                    return zero(α)
+            catch err
+                if err isa DomainError
+                    α = (α + α_prev) / 2
+                    if α == α_prev
+                        @warn "==BRACKETING FAIL, LAST STEP VALUE RETURNED==" α
+                        @logmsg LSLogLevel "==LINEAR SEARCH INTERRUPTED=="
+                        return zero(α)
+                    end
+                else
+                    rethrow(err)
                 end
             end
         end
