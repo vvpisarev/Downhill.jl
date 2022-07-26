@@ -70,12 +70,14 @@ function strong_backtracking!(
                 break
             catch err
                 if err isa DomainError
-                    α = (α + α_prev) / 2
-                    if α == α_prev
+                    α_new = (α + α_prev) / 2
+                    if α_new == α_prev || α_new == α
+                        α = (α + α_prev) / 2
                         @warn "==BRACKETING FAIL, LAST STEP VALUE RETURNED==" α
                         @logmsg LSLogLevel "==LINEAR SEARCH INTERRUPTED=="
                         return zero(α)
                     end
+                    α = α_new
                 else
                     rethrow(err)
                 end
