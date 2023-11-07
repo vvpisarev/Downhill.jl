@@ -40,5 +40,12 @@ end
             )
             @test optimize!(rosenbrock!, opt, init_vec) isa NamedTuple
         end
+
+        @testset "$(typeof(descent).name) (default parameters)" for descent in descent_methods
+            opt = Downhill.solver(
+                descent,
+            )
+            @test optimize!(rosenbrock!, opt, init_vec) isa NamedTuple
+        end
     end
 end

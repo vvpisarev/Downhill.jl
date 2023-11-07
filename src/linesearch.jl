@@ -63,18 +63,36 @@ function strong_backtracking!(
     nbracket_max = 200
     @logmsg LSLogLevel "==BRACKETING THE MINIMUM=="
     for nbracket in 1:nbracket_max
-        y, grad = fdf(x0, α, d)
+        local y, grad
+        while true
+            try
+                y, grad = fdf(x0, α, d)
+                break
+            catch err
+                if err isa DomainError
+                    α_new = (α + α_prev) / 2
+                    if α_new == α_prev || α_new == α
+                        @warn "==BRACKETING FAIL, LAST STEP VALUE RETURNED==" α
+                        @logmsg LSLogLevel "==LINEAR SEARCH INTERRUPTED=="
+                        return zero(α)
+                    end
+                    α = α_new
+                else
+                    rethrow(err)
+                end
+            end
+        end
         g = dot(grad, d)
         Δyp = (g + g0) * α / 2 # parabolic approximation
         if abs(Δyp) < ϵ
-            @logmsg LSLogLevel "" """
+            @logmsg LSLogLevel """
                 Δyp = $(Δyp) (*)
                 Δy = $(y-y0)
             """
             Δy = Δyp
         else
             Δy = y - y0
-            @logmsg LSLogLevel "" """
+            @logmsg LSLogLevel """
                 Δyp = $(Δyp)
                 Δy = $(Δy) (*)
             """
